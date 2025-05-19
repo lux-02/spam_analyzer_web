@@ -17,6 +17,7 @@ import EmailBodyContent from "../../components/EmailBodyContent";
 import RiskScoreChecklist from "../../components/RiskScoreChecklist";
 import VirusTotalButton from "../../components/VirusTotalButton";
 import VirusTotalModal from "../../components/VirusTotalModal";
+import AdBanner from "../../components/ui/AdBanner";
 
 // 로컬 스토리지 키 상수
 const FAILED_DOMAINS_KEY = "vtFailedDomains";
@@ -424,34 +425,19 @@ export default function EmailAnalysisResult() {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen pb-10">
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-text dark:text-white">
       <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content="이메일 헤더 및 위험도 분석 결과" />
+        <title>이메일 분석 결과 - NAVER MAIL ANALYZER</title>
+        <meta name="description" content="네이버 이메일 스팸/피싱 분석 결과" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <header className="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 shadow-md mb-6">
-        <div className="container mx-auto">
-          <div className="flex items-center">
-            <h1
-              className="text-xl font-semibold"
-              onClick={() => router.push("/")}
-            >
-              NAVER MAIL ANALYZER
-            </h1>
+      {/* 상단 광고 배너 추가 */}
+      <div className="container mx-auto px-4 mt-4">
+        <AdBanner slot="2345678901" />
+      </div>
 
-            <button
-              onClick={() => router.push("/")}
-              className="ml-auto bg-white text-blue-700 px-3 py-1 rounded hover:bg-gray-100"
-            >
-              NEW
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 max-w-5xl">
+      <div className="container mx-auto px-4 py-8">
         <EmailHeader emailData={emailData} />
 
         {isAnalyzing && (
@@ -679,14 +665,12 @@ export default function EmailAnalysisResult() {
           target={virusTotalTarget}
           isLoading={virusTotalLoading}
         />
-      </main>
+      </div>
 
-      <footer className="container mx-auto px-4 pt-10 text-center text-gray-500 text-sm">
-        <p>
-          © 2025 NAVER MAIL ANALYZER - 이메일 분석 데이터는 안전한
-          데이터베이스에 저장됩니다.
-        </p>
-      </footer>
+      {/* 하단 광고 배너 추가 */}
+      <div className="container mx-auto px-4 mb-4">
+        <AdBanner slot="3456789012" format="auto" />
+      </div>
     </div>
   );
 }

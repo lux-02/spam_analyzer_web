@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import Link from "next/link";
 import Footer from "../components/ui/Footer";
+import AdBanner from "../components/ui/AdBanner";
 
 export default function Home() {
   const [rawData, setRawData] = useState("");
@@ -149,6 +150,10 @@ export default function Home() {
               '더보기'(⋮) &gt; '원문 보기'를 선택하세요.
             </p>
           </div>
+        </div>
+
+        <div className="mt-8 w-full max-w-3xl mx-auto">
+          <AdBanner slot="1234567890" />
         </div>
       </div>
 
