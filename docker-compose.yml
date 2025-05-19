@@ -1,6 +1,19 @@
 version: "3.8"
 
 services:
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - spam_analyzer
+    networks:
+      - spam_analyzer_network
+
   # 스팸 분석기 서비스
   spam_analyzer:
     build:
@@ -8,9 +21,9 @@ services:
       dockerfile: Dockerfile
     container_name: spam_analyzer_web
     restart: always
-    ports:
-      - "3000:3000" # Next.js 포트
-      - "5001:5001" # Flask 서버 포트
+    expose:
+      - "3000"
+      - "5001"
     environment:
       - NODE_ENV=production
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/spam_analyzer}
