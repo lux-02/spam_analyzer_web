@@ -128,6 +128,14 @@ export default function VirusTotalModal({
 
   if (!isOpen) return null;
 
+  // 안전한 분석 결과 엑세스를 위한 변수 설정
+  const analysisStats = results?.analysis_stats || {
+    malicious: 0,
+    suspicious: 0,
+    harmless: 0,
+    undetected: 0,
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
@@ -282,8 +290,8 @@ export default function VirusTotalModal({
                       악성
                     </span>
                     <span className="text-xl font-bold text-red-700 dark:text-red-300">
-                      {results.analysis_stats.malicious ||
-                        results.analysis_stats.malicious_count ||
+                      {analysisStats.malicious ||
+                        analysisStats.malicious_count ||
                         0}
                     </span>
                   </div>
@@ -292,7 +300,7 @@ export default function VirusTotalModal({
                       의심
                     </span>
                     <span className="text-xl font-bold text-yellow-700 dark:text-yellow-300">
-                      {results.analysis_stats.suspicious || 0}
+                      {analysisStats.suspicious || 0}
                     </span>
                   </div>
                   <div className="bg-green-50 dark:bg-green-900 p-3 rounded">
@@ -300,7 +308,7 @@ export default function VirusTotalModal({
                       안전
                     </span>
                     <span className="text-xl font-bold text-green-700 dark:text-green-300">
-                      {results.analysis_stats.harmless || 0}
+                      {analysisStats.harmless || 0}
                     </span>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
@@ -308,7 +316,7 @@ export default function VirusTotalModal({
                       미탐지
                     </span>
                     <span className="text-xl font-bold text-gray-700 dark:text-gray-300">
-                      {results.analysis_stats.undetected || 0}
+                      {analysisStats.undetected || 0}
                     </span>
                   </div>
                 </div>

@@ -10,10 +10,21 @@ const isValidIpAddress = (ip) => {
   return /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip);
 };
 
+// URL 정제 함수 - 괄호, 구두점 등 제거
+const sanitizeUrl = (url) => {
+  // URL에서 흔히 발생하는 문제 패턴 수정
+  // 끝에 있는 괄호나 마침표 등 제거
+  return url.replace(/[(),.;'"!?]+$/, "");
+};
+
 // URL 유효성 검사
 const isValidUrl = (url) => {
   try {
-    new URL(url.startsWith("http") ? url : `https://${url}`);
+    // URL 정제
+    const sanitizedUrl = sanitizeUrl(url);
+    new URL(
+      sanitizedUrl.startsWith("http") ? sanitizedUrl : `https://${sanitizedUrl}`
+    );
     return true;
   } catch (e) {
     return false;
@@ -23,7 +34,11 @@ const isValidUrl = (url) => {
 // 도메인 추출
 const extractDomain = (url) => {
   try {
-    const parsedUrl = new URL(url.startsWith("http") ? url : `https://${url}`);
+    // URL 정제
+    const sanitizedUrl = sanitizeUrl(url);
+    const parsedUrl = new URL(
+      sanitizedUrl.startsWith("http") ? sanitizedUrl : `https://${sanitizedUrl}`
+    );
     return parsedUrl.hostname;
   } catch (e) {
     return url;
@@ -44,26 +59,33 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 입력 정제
+    const sanitizedTarget = sanitizeUrl(target);
+    console.log(`원본 입력: ${target}, 정제된 입력: ${sanitizedTarget}`);
+
     // IP 주소인지 확인
-    const isIPAddress = isValidIpAddress(target);
+    const isIPAddress = isValidIpAddress(sanitizedTarget);
     // IP 아닌 경우 URL인지 확인
-    const isUrl = !isIPAddress && isValidUrl(target);
+    const isUrl = !isIPAddress && isValidUrl(sanitizedTarget);
 
     // 유효하지 않은 입력인 경우
     if (!isIPAddress && !isUrl) {
       return res.status(400).json({
         error: "유효하지 않은 IP 주소 또는 URL입니다.",
+        original_input: target,
+        sanitized_input: sanitizedTarget,
       });
     }
 
-    let ipToAnalyze = target;
+    let ipToAnalyze = sanitizedTarget;
     let originalTarget = target;
 
     // URL인 경우 IP로 변환
     if (isUrl) {
       try {
         // 도메인 추출
-        const domain = extractDomain(target);
+        const domain = extractDomain(sanitizedTarget);
+        console.log(`도메인 추출: ${domain}`);
 
         // DNS 조회로 IP 가져오기
         const { address } = await dnsLookup(domain);
@@ -78,6 +100,8 @@ export default async function handler(req, res) {
           threat: "unknown",
           message: "도메인의 IP 주소를 찾을 수 없습니다.",
           error: "DNS 조회 실패",
+          original_target: originalTarget,
+          sanitized_target: sanitizedTarget,
         });
       }
     }
@@ -137,7 +161,7 @@ export default async function handler(req, res) {
 
         // URL 분석 시도
         if (isUrl) {
-          return await analyzeUrl(originalTarget, res);
+          return await analyzeUrl(sanitizedTarget, res, originalTarget);
         }
 
         // 오류 처리
@@ -145,7 +169,7 @@ export default async function handler(req, res) {
       }
     } else if (isUrl) {
       // IP 추출에 실패한 경우 일반 URL 분석 진행
-      return await analyzeUrl(originalTarget, res);
+      return await analyzeUrl(sanitizedTarget, res, originalTarget);
     }
   } catch (error) {
     console.error(
@@ -157,7 +181,7 @@ export default async function handler(req, res) {
 }
 
 // URL 분석 함수
-async function analyzeUrl(url, res) {
+async function analyzeUrl(url, res, originalTarget) {
   try {
     const formattedUrl = url.startsWith("http") ? url : `https://${url}`;
 
@@ -192,7 +216,8 @@ async function analyzeUrl(url, res) {
       query_status: "ok",
       threat: isMalicious ? "malicious" : "none",
       message: isMalicious ? "악성 URL로 판단되었습니다." : "안전한 URL입니다.",
-      original_target: url,
+      original_target: originalTarget || url,
+      sanitized_target: url,
       analysis_stats: stats,
       analysis_results: results,
       virustotal_url: `https://www.virustotal.com/gui/url/${analysisId}`,
