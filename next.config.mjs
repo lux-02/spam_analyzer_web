@@ -7,6 +7,18 @@ const nextConfig = {
     },
     responseLimit: "10mb",
   },
+  async headers() {
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type" },
+        ],
+      },
+    ];
+  },
   webpack: (config) => {
     // Leaflet 모듈이 SSR과 충돌하지 않도록 설정
     config.resolve.fallback = {
