@@ -14,7 +14,7 @@ services:
     environment:
       - NODE_ENV=production
       - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/spam_analyzer}
-      - FLASK_SERVER_URL=${FLASK_SERVER_URL:-http://localhost:5001}
+      - FLASK_SERVER_URL=${FLASK_SERVER_URL:-http://0.0.0.0:5001}
       - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY}
     volumes:
       - ./data:/app/data

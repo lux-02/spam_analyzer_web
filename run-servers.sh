@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 환경 설정
-export FLASK_API_URL=http://localhost:5001/analyze
+export FLASK_API_URL=http://0.0.0.0:5001/analyze
 export FLASK_PORT=5001
 
 # 현재 디렉토리 저장
@@ -22,8 +22,8 @@ npm run dev &
 NEXT_PID=$!
 
 echo "✅ 두 서버가 모두 실행 중입니다:"
-echo "- Flask 서버: http://localhost:5001"
-echo "- Next.js 서버: http://localhost:3000"
+echo "- Flask 서버: http://0.0.0.0:5001"
+echo "- Next.js 서버: http://0.0.0.0:3000"
 
 # Ctrl+C로 두 서버 모두 종료
 function cleanup {

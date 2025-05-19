@@ -23,6 +23,8 @@ LABEL version="1.0.0"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nmap \
     curl \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # 작업 디렉토리 설정
