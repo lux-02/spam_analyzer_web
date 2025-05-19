@@ -29,6 +29,7 @@ if not VT_API_KEY:
     logger.warning("경고: VIRUSTOTAL_API_KEY 환경 변수가 설정되지 않았습니다.")
 
 @app.route('/api/vt-graph', methods=['POST'])
+@app.route('/vt-graph', methods=['POST'])
 def create_vt_graph():
     try:
         if not VT_API_KEY:
@@ -94,6 +95,7 @@ def create_vt_graph():
         }), 500
 
 @app.route('/api/vt-graph/<graph_id>', methods=['GET'])
+@app.route('/vt-graph/<graph_id>', methods=['GET'])
 def get_vt_graph(graph_id):
     try:
         if not VT_API_KEY:
@@ -244,6 +246,7 @@ def scan_ports(ip, port_range='21-25,80,443,8080-8090', timeout=3):
         }
 
 @app.route('/api/scan', methods=['POST'])
+@app.route('/scan', methods=['POST'])
 def scan_ip():
     """IP 주소에 대한 포트 스캔 및 배너그랩을 실행합니다."""
     try:
