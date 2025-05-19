@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  basePath: "/n",
   serverRuntimeConfig: {
     bodyParser: {
       sizeLimit: "10mb",

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
+import Cors from "cors";
 import {
   analyzeEmailHeader,
   parseEmailBodyAndLinks,
@@ -10,6 +11,24 @@ import {
   analyzeEmailIntent,
 } from "../../utils/emailAnalyzer";
 import { connectToDatabase, AnalysisResult } from "../../utils/db";
+
+// CORS 미들웨어 초기화
+const cors = Cors({
+  methods: ["POST", "GET", "OPTIONS"],
+  origin: "*", // 실제 배포 시 확장앱의 ID나 특정 도메인으로 제한하는 것을 권장합니다
+});
+
+// CORS 미들웨어 실행 헬퍼 함수
+function runMiddleware(req, res, fn) {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (result) => {
+      if (result instanceof Error) {
+        return reject(result);
+      }
+      return resolve(result);
+    });
+  });
+}
 
 // 파일 시스템 기반 스토리지 경로 설정 (기존 코드 유지, 아직 완전히 마이그레이션되지 않은 기능을 위해)
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -158,6 +177,9 @@ export async function getResult(id) {
 }
 
 export default async function handler(req, res) {
+  // CORS 미들웨어 실행
+  await runMiddleware(req, res, cors);
+
   // API 호출 전 스토리지 초기화 확인
   await initializeStorage();
 
