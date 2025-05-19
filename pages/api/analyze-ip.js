@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     try {
       // 포트 스캔 실행
       const portScanResponse = await axios.post(
-        `${flaskBaseUrl}/api/scan`,
+        `${flaskBaseUrl}/scan`,
         { ip, port_range: "21-25,80,443,8080-8090", timeout: 5 },
         { timeout: 30000 } // 30초 타임아웃
       );
