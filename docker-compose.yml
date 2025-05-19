@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
   # 스팸 분석기 서비스
@@ -22,6 +22,26 @@ services:
       - mongo
     networks:
       - spam_analyzer_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    watch:
+      - path: ./flask-server
+        target: /app/flask-server
+        action: sync
+      - path: ./pages
+        target: /app/pages
+        action: sync
+      - path: ./components
+        target: /app/components
+        action: sync
+      - path: ./public
+        target: /app/public
+        action: sync
 
   # MongoDB 서비스
   mongo:
