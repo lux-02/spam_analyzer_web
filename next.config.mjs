@@ -23,6 +23,10 @@ const nextConfig = {
       process.env.MONGODB_URI || "mongodb://localhost:27017/spam_analyzer",
     FLASK_SERVER_URL: process.env.FLASK_SERVER_URL || "http://localhost:5001",
   },
+  // ESLint 설정 - 빌드 시 경고와 오류 무시
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;

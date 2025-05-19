@@ -16,6 +16,11 @@ const AdBanner = ({ slot, format = "auto", responsive = true, style = {} }) => {
 
   return (
     <div className="ad-container my-4">
+      {/* 
+        AdSense 광고 삽입
+        - YOUR_ADSENSE_CLIENT_ID: AdSense 계정의 pub ID로 교체 필요
+        - slot: 광고 유닛별 고유 ID (AdSense 관리자에서 생성한 광고 유닛 ID)
+      */}
       <ins
         ref={adRef}
         className="adsbygoogle"
