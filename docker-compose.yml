@@ -18,6 +18,12 @@ services:
       - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY}
     volumes:
       - ./data:/app/data
+      - ./flask-server:/app/flask-server
+      - ./pages:/app/pages
+      - ./components:/app/components
+      - ./public:/app/public
+      - /app/node_modules
+      - /app/.next
     depends_on:
       - mongo
     networks:
@@ -29,19 +35,6 @@ services:
         parallelism: 1
         delay: 10s
         order: start-first
-    watch:
-      - path: ./flask-server
-        target: /app/flask-server
-        action: sync
-      - path: ./pages
-        target: /app/pages
-        action: sync
-      - path: ./components
-        target: /app/components
-        action: sync
-      - path: ./public
-        target: /app/public
-        action: sync
 
   # MongoDB 서비스
   mongo:
