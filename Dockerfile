@@ -53,11 +53,11 @@ RUN cd flask-server && \
 EXPOSE 3000 5001
 
 # 환경 변수 설정
-ENV FLASK_API_URL=http://localhost:5001/analyze
+ENV FLASK_API_URL=http://0.0.0.0:5001/analyze
 ENV FLASK_PORT=5001
 ENV NODE_ENV=production
-ENV MONGODB_URI=mongodb://localhost:27017/spam_analyzer
-ENV FLASK_SERVER_URL=http://localhost:5001
+ENV MONGODB_URI=mongodb://mongo:27017/spam_analyzer
+ENV FLASK_SERVER_URL=http://0.0.0.0:5001
 
 # 서버 실행
 CMD ["./run-servers.sh"] 

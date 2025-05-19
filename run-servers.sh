@@ -16,9 +16,14 @@ FLASK_PID=$!
 # NextJS 디렉토리로 이동
 cd $ROOT_DIR
 
-# NextJS 서버 실행
+# NextJS 서버 실행 (빌드된 버전 사용)
 echo "🚀 Next.js 서버 시작 중..."
-npm run dev &
+if command -v npm &> /dev/null; then
+  npm run start &
+else
+  # npm이 없을 경우 node로 직접 실행
+  node node_modules/next/dist/bin/next start -H 0.0.0.0 -p 3000 &
+fi
 NEXT_PID=$!
 
 echo "✅ 두 서버가 모두 실행 중입니다:"
