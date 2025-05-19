@@ -232,7 +232,7 @@ def scan_ports(ip, port_range='21-25,80,443,8080-8090', timeout=3):
         # nmap 프로그램 찾지 못함 오류인 경우 더 명확한 메시지 반환
         if "nmap program was not found in path" in error_message:
             return {
-                'error': "nmap이 설치되어 있지 않습니다. 시스템에 nmap을 설치한 후 다시 시도해주세요.",
+                'error': "not found",
                 'open_ports': [],
                 'filtered_ports': [],
                 'closed_ports': []
