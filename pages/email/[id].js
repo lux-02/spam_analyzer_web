@@ -431,6 +431,25 @@ export default function EmailAnalysisResult() {
         <meta name="description" content="네이버 이메일 스팸/피싱 분석 결과" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+      <header className="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 shadow-md mb-6">
+        <div className="container mx-auto">
+          <div className="flex items-center">
+            <h1
+              className="text-xl font-semibold"
+              onClick={() => router.push("/")}
+            >
+              NAVER MAIL ANALYZER
+            </h1>
+
+            <button
+              onClick={() => router.push("/")}
+              className="ml-auto bg-white text-blue-700 px-3 py-1 rounded hover:bg-gray-100"
+            >
+              NEW
+            </button>
+          </div>
+        </div>
+      </header>
 
       {/* 상단 광고 배너 추가 */}
       <div className="container mx-auto px-4 mt-4">
