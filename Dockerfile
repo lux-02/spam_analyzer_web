@@ -43,12 +43,10 @@ RUN chmod +x /app/run-servers.sh
 
 # Python 가상환경 설정 및 의존성 설치
 RUN cd flask-server && \
-    python -m venv venv && \
-    . venv/bin/activate && \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir vt-graph-api python-dotenv
-
+    
 # 포트 노출
 EXPOSE 3000 5001
 
