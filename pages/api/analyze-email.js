@@ -196,6 +196,15 @@ export default async function handler(req, res) {
         .json({ error: "이메일 원문 데이터가 필요합니다." });
     }
 
+    // 원문 데이터 유효성 검사
+    const isValid = validateEmailRawData(rawData);
+    if (!isValid.valid) {
+      return res.status(400).json({
+        success: false,
+        error: `올바른 이메일 원문 데이터가 아닙니다: ${isValid.reason}`,
+      });
+    }
+
     console.log("이메일 분석 요청 시작");
 
     // 이메일 헤더 분석
@@ -301,6 +310,53 @@ export default async function handler(req, res) {
       error: error.message,
     });
   }
+}
+
+// 이메일 원문 데이터 유효성 검증 함수
+function validateEmailRawData(rawData) {
+  // 필수 이메일 헤더 필드 중 최소 2개 이상 존재하는지 확인
+  const requiredHeaders = [
+    "From:",
+    "To:",
+    "Subject:",
+    "Date:",
+    "Received:",
+    "Message-ID:",
+  ];
+  const foundHeaders = requiredHeaders.filter((header) =>
+    rawData.includes(header)
+  );
+
+  // 최소 길이 확인 (메일 원문은 보통 수백 바이트 이상)
+  const minLength = 200;
+
+  // 이메일 본문 구분자가 있는지 확인
+  const hasBodySeparator = rawData.includes("\n\n");
+
+  // 유효성 결과
+  if (foundHeaders.length < 2) {
+    return { valid: false, reason: "이메일 헤더 정보가 부족합니다." };
+  }
+
+  if (rawData.length <= minLength) {
+    return { valid: false, reason: "메일 원문 데이터가 너무 짧습니다." };
+  }
+
+  if (!hasBodySeparator) {
+    return { valid: false, reason: "이메일 형식이 올바르지 않습니다." };
+  }
+
+  // 헤더 분석을 시험적으로 수행해서 파싱 가능한지 확인
+  try {
+    const headerAnalysisResult = analyzeEmailHeader(rawData);
+    if (Object.keys(headerAnalysisResult).length < 3) {
+      return { valid: false, reason: "이메일 헤더를 파싱할 수 없습니다." };
+    }
+  } catch (e) {
+    return { valid: false, reason: "원문 데이터 파싱 중 오류가 발생했습니다." };
+  }
+
+  return { valid: true };
 }
 
 // 서버 사이드에서 사용할 분석 결과 조회 함수

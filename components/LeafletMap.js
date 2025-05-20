@@ -56,7 +56,7 @@ const LeafletMap = ({ locations }) => {
   return (
     <MapContainer
       center={centerPosition}
-      zoom={1}
+      zoom={2}
       style={{ height: "100%", width: "100%" }}
       id={mapId}
       key={mapId}

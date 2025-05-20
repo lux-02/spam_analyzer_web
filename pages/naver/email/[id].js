@@ -442,7 +442,7 @@ export default function EmailAnalysisResult() {
             </h1>
 
             <button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/naver")}
               className="ml-auto bg-white text-blue-700 px-3 py-1 rounded hover:bg-gray-100"
             >
               NEW

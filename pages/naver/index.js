@@ -6,6 +6,44 @@ import Link from "next/link";
 import Footer from "@/components/ui/Footer";
 import AdBanner from "@/components/ui/AdBanner";
 
+// 이메일 원문 데이터 유효성 검증 함수
+const isValidEmailRawData = (rawData) => {
+  // 필수 이메일 헤더 필드 중 최소 1개 이상 존재하는지 확인
+  const requiredHeaders = [
+    "From:",
+    "To:",
+    "Subject:",
+    "Date:",
+    "Received:",
+    "Message-ID:",
+  ];
+  const foundHeaders = requiredHeaders.filter((header) =>
+    rawData.includes(header)
+  );
+
+  // 최소 길이 확인 (메일 원문은 보통 수백 바이트 이상)
+  const minLength = 100;
+
+  // 이메일 본문 구분자가 있는지 확인
+  const hasBodySeparator = rawData.includes("\n\n");
+
+  // 검증 결과
+  return {
+    isValid:
+      foundHeaders.length >= 1 &&
+      rawData.length > minLength &&
+      hasBodySeparator,
+    reason:
+      foundHeaders.length < 1
+        ? "이메일 헤더 정보가 부족합니다."
+        : rawData.length <= minLength
+        ? "메일 원문 데이터가 너무 짧습니다."
+        : !hasBodySeparator
+        ? "이메일 형식이 올바르지 않습니다."
+        : "",
+  };
+};
+
 export default function Home() {
   const [rawData, setRawData] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +61,13 @@ export default function Home() {
 
     if (!dataConsent) {
       setError("개인정보 수집 및 이용에 동의해주세요.");
+      return;
+    }
+
+    // 원문 데이터 유효성 검사
+    const validation = isValidEmailRawData(rawData);
+    if (!validation.isValid) {
+      setError(`올바른 이메일 원문 데이터가 아닙니다: ${validation.reason}`);
       return;
     }
 
@@ -57,11 +102,28 @@ export default function Home() {
       console.log("분석 완료, 결과 페이지로 이동합니다:", analysisId);
 
       // 분석 ID로 결과 페이지로 이동
-      router.push(`/email/${analysisId}`);
+      router.push(`/naver/email/${analysisId}`);
     } catch (err) {
       setError(err.message);
       setIsLoading(false);
     }
+  };
+
+  // 실시간 유효성 검사 결과
+  const getValidationHint = () => {
+    if (!rawData.trim()) return null;
+
+    const validation = isValidEmailRawData(rawData);
+    if (!validation.isValid) {
+      return (
+        <div className="text-red-500 text-sm mt-1">{validation.reason}</div>
+      );
+    }
+    return (
+      <div className="text-green-500 text-sm mt-1">
+        올바른 이메일 원문 형식입니다.
+      </div>
+    );
   };
 
   return (
@@ -100,6 +162,7 @@ export default function Home() {
                 className="form-textarea"
                 placeholder="이메일 원문 데이터를 붙여넣으세요..."
               />
+              {getValidationHint()}
             </div>
 
             <div className="flex items-start mt-2">
@@ -151,12 +214,7 @@ export default function Home() {
             </p>
           </div>
         </div>
-
-        <div className="mt-8 w-full max-w-3xl mx-auto">
-          <AdBanner slot="1234567890" />
-        </div>
       </div>
-
       <Footer />
     </div>
   );
