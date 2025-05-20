@@ -146,8 +146,19 @@ a.secondary {
   }
 }
 
+.cardContainer {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
 .card {
-  background: rgba(255, 255, 255, 0.08);
+  background: none;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.5rem;
@@ -155,8 +166,8 @@ a.secondary {
   color: #ffffff;
   text-decoration: none;
   transition: all 0.2s ease;
-
-  width: 90%;
+  margin: 0;
+  width: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -189,9 +200,9 @@ a.secondary {
 }
 
 .card h2 {
-  margin: 0 0 1rem 0;
   font-size: 1.5rem;
   color: #ffffff;
+  font-weight: 600;
 }
 
 .card p {
@@ -285,7 +296,20 @@ a.secondary {
   position: relative;
   width: 100%;
   max-width: 400px;
-  margin: 2rem 0;
+}
+
+.logoContainer {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logoImage {
+  width: auto;
+  height: auto;
+  max-width: 200px;
 }
 
 @media (max-width: 600px) {
@@ -297,4 +321,23 @@ a.secondary {
     width: 100%;
     flex-direction: column;
   }
+}
+
+@keyframes rotateAnimation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.rotatingStar {
+  transform-origin: 50% 50%;
+  transition: transform 0.3s ease;
+}
+
+.rotatingStar:hover,
+.rotatingStar:active {
+  animation: rotateAnimation 4s cubic-bezier(0.9, 0, 0.2, 1) infinite;
 }
