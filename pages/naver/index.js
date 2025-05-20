@@ -213,6 +213,64 @@ export default function Home() {
               '더보기'(⋮) &gt; '원문 보기'를 선택하세요.
             </p>
           </div>
+
+          {/* 확장 프로그램 설치 카드 */}
+          <div className="mt-8">
+            <h3 className="text-lg font-bold mb-3 text-heading dark:text-white">
+              확장 프로그램으로 간편하게 사용하기
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* 크롬 웹스토어 카드 */}
+              <a
+                href="https://chromewebstore.google.com/detail/egiihcmplomfonhicnabpifjpgkhcimi?utm_source=item-share-cb"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="h-12 w-12 mb-3">
+                  <img
+                    src="https://fonts.gstatic.com/s/i/productlogos/chrome_store/v7/192px.svg"
+                    alt="Chrome Web Store"
+                  />
+                </div>
+                <div className="text-center">
+                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">
+                    Chrome 웹스토어
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    크롬 브라우저용 확장 프로그램
+                  </p>
+                </div>
+              </a>
+
+              {/* 네이버 웨일 스토어 카드 */}
+              <a
+                href="https://store.whale.naver.com/detail/iifpjpbmgopecnfibfnakgobibghhien"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="h-12 w-12 mb-3">
+                  <img
+                    src="https://shared-whale.pstatic.net/favicon/store/icon.png"
+                    alt="Whale Store"
+                  />
+                </div>
+                <div className="text-center">
+                  <h4 className="font-bold text-gray-800 dark:text-white mb-1">
+                    웨일 스토어
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    네이버 웨일 브라우저용 확장앱
+                  </p>
+                </div>
+              </a>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+              브라우저 확장 프로그램을 설치하면 네이버 메일에서 바로 분석할 수
+              있습니다
+            </p>
+          </div>
         </div>
       </div>
       <Footer />
