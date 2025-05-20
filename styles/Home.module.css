@@ -1,5 +1,4 @@
 .page {
-  --background: #121212;
   --gray-rgb: 0, 0, 0;
   --gray-alpha-200: rgba(var(--gray-rgb), 0.08);
   --gray-alpha-100: rgba(var(--gray-rgb), 0.05);
@@ -148,12 +147,12 @@ a.secondary {
 }
 
 .card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 1.5rem;
   text-align: left;
-  color: inherit;
+  color: #ffffff;
   text-decoration: none;
   transition: all 0.2s ease;
 
@@ -172,7 +171,7 @@ a.secondary {
   background: linear-gradient(
     45deg,
     transparent,
-    rgba(0, 112, 243, 0.1),
+    rgba(255, 255, 255, 0.1),
     transparent
   );
   transform: translateX(-100%);
@@ -185,21 +184,21 @@ a.secondary {
 
 .card:hover {
   transform: translateY(-2px);
-  border-color: var(--primary);
-  box-shadow: 0 4px 20px rgba(0, 112, 243, 0.1);
+  border-color: rgba(0, 112, 243, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 112, 243, 0.2);
 }
 
 .card h2 {
   margin: 0 0 1rem 0;
   font-size: 1.5rem;
-  color: var(--foreground);
+  color: #ffffff;
 }
 
 .card p {
   margin: 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: #888;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .container {
@@ -211,6 +210,8 @@ a.secondary {
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
+  background-color: #121212;
+  color: #ffffff;
 }
 
 .main {
