@@ -8,7 +8,7 @@ import {
   isValidUrl,
   isAnalyzableTarget,
 } from "@/utils/emailAnalyzer";
-
+import ThemeToggle from "@/components/ui/ThemeToggle";
 // 컴포넌트 import
 import EmailHeader from "@/components/EmailHeader";
 import AuthenticationInfo from "@/components/AuthenticationInfo";
@@ -18,7 +18,7 @@ import RiskScoreChecklist from "@/components/RiskScoreChecklist";
 import VirusTotalButton from "@/components/VirusTotalButton";
 import VirusTotalModal from "@/components/VirusTotalModal";
 import AdBanner from "@/components/ui/AdBanner";
-
+import Footer from "@/components/ui/Footer";
 // 로컬 스토리지 키 상수
 const FAILED_DOMAINS_KEY = "vtFailedDomains";
 const VT_RESULTS_CACHE_KEY = "vtResultsCache";
@@ -241,40 +241,55 @@ export default function EmailAnalysisResult() {
               newAnalyzedTargets[target] = { status: "analyzing" };
 
               const type = isValidIpAddress(target) ? "ip" : "url";
-              const response = await axios.post("/api/virustotal", { target });
 
-              if (response.status === 200) {
-                const data = response.data;
+              try {
+                const response = await axios.post("/api/virustotal", {
+                  target,
+                });
 
-                // DNS 조회 실패 처리
-                if (
-                  data.query_status === "failed" &&
-                  data.error === "DNS 조회 실패"
-                ) {
-                  saveFailedDomain(target);
-                  newAnalyzedTargets[target] = { status: "failed" };
+                if (response.status === 200) {
+                  const data = response.data;
+
+                  // DNS 조회 실패 처리
+                  if (
+                    data.query_status === "failed" &&
+                    data.error === "DNS 조회 실패"
+                  ) {
+                    saveFailedDomain(target);
+                    newAnalyzedTargets[target] = { status: "failed" };
+                  } else {
+                    saveResultToCache(target, data);
+
+                    // 분석 결과에 따른 상태 설정
+                    const threat = data.threat;
+                    const isSuspicious =
+                      data.analysis_stats?.suspicious > 0 || // URL 분석
+                      data.analysis_stats?.malicious_details?.some((detail) =>
+                        detail.result.includes("suspicious")
+                      ) ||
+                      false; // IP 분석
+
+                    newAnalyzedTargets[target] = {
+                      status: "analyzed",
+                      threat:
+                        isSuspicious && threat !== "malicious"
+                          ? "suspicious"
+                          : threat,
+                    };
+                  }
                 } else {
-                  saveResultToCache(target, data);
-
-                  // 분석 결과에 따른 상태 설정
-                  const threat = data.threat;
-                  const isSuspicious =
-                    data.analysis_stats?.suspicious > 0 || // URL 분석
-                    data.analysis_stats?.malicious_details?.some((detail) =>
-                      detail.result.includes("suspicious")
-                    ) ||
-                    false; // IP 분석
-
-                  newAnalyzedTargets[target] = {
-                    status: "analyzed",
-                    threat:
-                      isSuspicious && threat !== "malicious"
-                        ? "suspicious"
-                        : threat,
-                  };
+                  newAnalyzedTargets[target] = { status: "error" };
                 }
-              } else {
-                newAnalyzedTargets[target] = { status: "error" };
+              } catch (apiError) {
+                // VirusTotal API 호출 오류 처리 (500 에러 포함)
+                console.error(
+                  `VirusTotal API 요청 오류 (${target}):`,
+                  apiError.message
+                );
+                newAnalyzedTargets[target] = {
+                  status: "error",
+                  message: "API 요청 실패 (분석 건너뜀)",
+                };
               }
             } catch (error) {
               console.error(`자동 분석 실패 (${target}):`, error);
@@ -308,37 +323,52 @@ export default function EmailAnalysisResult() {
     setVirusTotalModalOpen(true);
 
     try {
-      const response = await axios.post("/api/virustotal", { target });
+      try {
+        const response = await axios.post("/api/virustotal", { target });
 
-      if (response.status === 200) {
-        const data = response.data;
+        if (response.status === 200) {
+          const data = response.data;
 
-        // DNS 조회 실패 처리
-        if (data.query_status === "failed" && data.error === "DNS 조회 실패") {
-          saveFailedDomain(target);
-        } else {
-          // 의심 상태 체크 (suspicious 항목이 있는지 확인)
-          const isSuspicious =
-            data.analysis_stats?.suspicious > 0 || // URL 분석
-            data.analysis_stats?.malicious_details?.some((detail) =>
-              detail.result.includes("suspicious")
-            ) ||
-            false; // IP 분석
+          // DNS 조회 실패 처리
+          if (
+            data.query_status === "failed" &&
+            data.error === "DNS 조회 실패"
+          ) {
+            saveFailedDomain(target);
+          } else {
+            // 의심 상태 체크 (suspicious 항목이 있는지 확인)
+            const isSuspicious =
+              data.analysis_stats?.suspicious > 0 || // URL 분석
+              data.analysis_stats?.malicious_details?.some((detail) =>
+                detail.result.includes("suspicious")
+              ) ||
+              false; // IP 분석
 
-          if (isSuspicious && data.threat !== "malicious") {
-            // 기존 데이터에 의심 상태 추가
-            data.threat = "suspicious";
-            data.message = "의심스러운 요소가 발견되었습니다.";
+            if (isSuspicious && data.threat !== "malicious") {
+              // 기존 데이터에 의심 상태 추가
+              data.threat = "suspicious";
+              data.message = "의심스러운 요소가 발견되었습니다.";
+            }
+
+            saveResultToCache(target, data);
           }
 
-          saveResultToCache(target, data);
+          setVirusTotalResults(data);
+        } else {
+          setVirusTotalResults({
+            error: "분석 중 오류가 발생했습니다.",
+            details: response.data,
+          });
         }
-
-        setVirusTotalResults(data);
-      } else {
+      } catch (apiError) {
+        console.error(
+          `VirusTotal API 요청 오류 (${target}):`,
+          apiError.message
+        );
         setVirusTotalResults({
-          error: "분석 중 오류가 발생했습니다.",
-          details: response.data,
+          error: "서버 오류로 분석이 실패했습니다.",
+          details: apiError.message,
+          message: "서버 내부 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
         });
       }
     } catch (error) {
@@ -367,7 +397,9 @@ export default function EmailAnalysisResult() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <div className="text-2xl font-bold mb-4">📧 분석 결과 로딩 중...</div>
+          <div className="text-2xl font-bold mb-4 text-white">
+            📧 분석 결과 로딩 중...
+          </div>
           <div className="animate-pulse bg-blue-500 h-1 w-48 rounded-full mx-auto"></div>
         </div>
       </div>
@@ -433,7 +465,7 @@ export default function EmailAnalysisResult() {
       </Head>
       <header className="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 shadow-md mb-6">
         <div className="container mx-auto">
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <h1
               className="text-xl font-semibold"
               onClick={() => router.push("/naver")}
@@ -441,12 +473,7 @@ export default function EmailAnalysisResult() {
               NAVER MAIL ANALYZER
             </h1>
 
-            <button
-              onClick={() => router.push("/naver")}
-              className="ml-auto bg-white text-blue-700 px-3 py-1 rounded hover:bg-gray-100"
-            >
-              NEW
-            </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -680,11 +707,7 @@ export default function EmailAnalysisResult() {
           isLoading={virusTotalLoading}
         />
       </div>
-
-      {/* 하단 광고 배너 추가 */}
-      <div className="container mx-auto px-4 mb-4">
-        <AdBanner slot="3456789012" format="auto" />
-      </div>
+      <Footer />
     </div>
   );
 }
