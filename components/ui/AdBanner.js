@@ -20,12 +20,13 @@ const AdBanner = ({ slot, format = "auto", responsive = true, style = {} }) => {
         AdSense 광고 삽입
         - YOUR_ADSENSE_CLIENT_ID: AdSense 계정의 pub ID로 교체 필요
         - slot: 광고 유닛별 고유 ID (AdSense 관리자에서 생성한 광고 유닛 ID)
+       
       */}
       <ins
         ref={adRef}
         className="adsbygoogle"
         style={{ display: "block", ...style }}
-        data-ad-client="ca-pub-YOUR_ADSENSE_CLIENT_ID"
+        data-ad-client="ca-pub-1884359786783237"
         data-ad-slot={slot}
         data-ad-format={format}
         data-full-width-responsive={responsive ? "true" : "false"}
