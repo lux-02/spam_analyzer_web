@@ -7,17 +7,17 @@ import {
   isValidIpAddress,
   isValidUrl,
   isAnalyzableTarget,
-} from "../../utils/emailAnalyzer";
+} from "@/utils/emailAnalyzer";
 
 // 컴포넌트 import
-import EmailHeader from "../../components/EmailHeader";
-import AuthenticationInfo from "../../components/AuthenticationInfo";
-import ReceivedPathMap from "../../components/ReceivedPathMap";
-import EmailBodyContent from "../../components/EmailBodyContent";
-import RiskScoreChecklist from "../../components/RiskScoreChecklist";
-import VirusTotalButton from "../../components/VirusTotalButton";
-import VirusTotalModal from "../../components/VirusTotalModal";
-import AdBanner from "../../components/ui/AdBanner";
+import EmailHeader from "@/components/EmailHeader";
+import AuthenticationInfo from "@/components/AuthenticationInfo";
+import ReceivedPathMap from "@/components/ReceivedPathMap";
+import EmailBodyContent from "@/components/EmailBodyContent";
+import RiskScoreChecklist from "@/components/RiskScoreChecklist";
+import VirusTotalButton from "@/components/VirusTotalButton";
+import VirusTotalModal from "@/components/VirusTotalModal";
+import AdBanner from "@/components/ui/AdBanner";
 
 // 로컬 스토리지 키 상수
 const FAILED_DOMAINS_KEY = "vtFailedDomains";
@@ -450,11 +450,6 @@ export default function EmailAnalysisResult() {
           </div>
         </div>
       </header>
-
-      {/* 상단 광고 배너 추가 */}
-      <div className="container mx-auto px-4 mt-4">
-        <AdBanner slot="2345678901" />
-      </div>
 
       <div className="container mx-auto px-4 py-8">
         <EmailHeader emailData={emailData} />
