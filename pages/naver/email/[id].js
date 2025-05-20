@@ -436,7 +436,7 @@ export default function EmailAnalysisResult() {
           <div className="flex items-center">
             <h1
               className="text-xl font-semibold"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/naver")}
             >
               NAVER MAIL ANALYZER
             </h1>
