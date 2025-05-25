@@ -98,7 +98,9 @@ export default function VirusTotalModal({
       console.log("포트 스캔 요청:", ipAddress);
 
       // Flask 서버로 직접 요청 또는 Next.js API 경로를 통한 요청
-      const response = await axios.get(`/api/analyze-ip?ip=${ipAddress}`);
+      const response = await axios.get(`/api/analyze-ip?ip=${ipAddress}`, {
+        timeout: 180000, // 3분 타임아웃
+      });
 
       if (response.data && response.data.portScanInfo) {
         console.log("포트 스캔 성공:", response.data.portScanInfo);
@@ -107,9 +109,18 @@ export default function VirusTotalModal({
         setPortScanError("포트 스캔 결과를 가져오지 못했습니다.");
       }
     } catch (err) {
-      setPortScanError(
-        err.response?.data?.error || "포트 스캔 요청에 실패했습니다."
-      );
+      let errorMessage = "포트 스캔 요청에 실패했습니다.";
+
+      if (err.code === "ECONNABORTED") {
+        errorMessage = "포트 스캔 시간이 초과되었습니다. 다시 시도해주세요.";
+      } else if (err.response?.status === 504) {
+        errorMessage =
+          "포트 스캔 시간이 초과되었습니다. 서버가 응답하지 않습니다.";
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+
+      setPortScanError(errorMessage);
       console.error("포트 스캔 오류:", err);
     } finally {
       setLoadingPortScan(false);

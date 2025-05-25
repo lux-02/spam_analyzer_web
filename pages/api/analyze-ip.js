@@ -1,5 +1,14 @@
 import axios from "axios";
 
+// Next.js API 라우트 타임아웃 설정 (3분)
+export const config = {
+  api: {
+    responseLimit: false,
+    externalResolver: true,
+  },
+  maxDuration: 180, // 3분
+};
+
 export default async function handler(req, res) {
   const { ip } = req.query;
 
@@ -42,8 +51,8 @@ export default async function handler(req, res) {
       console.log(`포트 스캔 시작: ${ip}`);
       const portScanResponse = await axios.post(
         `${flaskBaseUrl}/scan`,
-        { ip, port_range: "21-25,80,443,8080-8090", timeout: 5 },
-        { timeout: 90000 } // 90초 타임아웃
+        { ip, port_range: "21-25,80,443,8080-8090", timeout: 10 }, // nmap 타임아웃 10초로 증가
+        { timeout: 150000 } // 2.5분 타임아웃
       );
 
       if (portScanResponse.data && portScanResponse.data.success) {

@@ -175,8 +175,10 @@ def scan_ports(ip, port_range='21-25,80,443,8080-8090', timeout=3):
         # nmap 스캐너 초기화
         scanner = nmap.PortScanner()
         
-        # 포트 스캔 실행 (서비스 버전 감지 포함, -Pn 옵션 추가)
-        scanner.scan(ip, port_range, arguments=f'-T4 --max-rtt-timeout {timeout}s -sV -Pn')
+        # 포트 스캔 실행 (최적화된 옵션)
+        # -T4: 빠른 스캔, -Pn: ping 건너뛰기, --max-rtt-timeout: RTT 타임아웃
+        # --max-retries: 재시도 횟수 제한, --max-scan-delay: 스캔 지연 제한
+        scanner.scan(ip, port_range, arguments=f'-T4 -Pn --max-rtt-timeout {timeout}s --max-retries 1 --max-scan-delay 1s -sV')
         
         result = {
             'open_ports': [],
