@@ -39,17 +39,26 @@ export default async function handler(req, res) {
 
     try {
       // 포트 스캔 실행
+      console.log(`포트 스캔 시작: ${ip}`);
       const portScanResponse = await axios.post(
         `${flaskBaseUrl}/scan`,
         { ip, port_range: "21-25,80,443,8080-8090", timeout: 5 },
-        { timeout: 30000 } // 30초 타임아웃
+        { timeout: 90000 } // 90초 타임아웃
       );
 
       if (portScanResponse.data && portScanResponse.data.success) {
+        console.log(
+          `포트 스캔 성공: ${ip}, 소요시간: ${portScanResponse.data.scan_time}`
+        );
         portScanInfo = portScanResponse.data;
+      } else {
+        console.log(`포트 스캔 실패: ${ip}, 응답:`, portScanResponse.data);
       }
     } catch (scanError) {
       console.error("포트 스캔 요청 중 오류 발생:", scanError.message);
+      if (scanError.code === "ECONNABORTED") {
+        console.error("포트 스캔 타임아웃 발생");
+      }
       // 오류가 발생해도 계속 진행 (포트 스캔 결과는 null)
     }
 

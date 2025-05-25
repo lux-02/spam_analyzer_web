@@ -181,7 +181,7 @@ export default function Home() {
                   htmlFor="dataConsent"
                   className="text-text-light dark:text-text-light"
                 >
-                  개인정보 수집 및 이용에 동의합니다.{" "}
+                  개인정보 수집 및 이용에 동의합니다.
                   <Link
                     href="/privacy-policy"
                     className="text-primary hover:underline"

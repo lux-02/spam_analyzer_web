@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@huggingface/inference": "^3.13.1",
+    "@react-three/drei": "^9.88.0",
+    "@react-three/fiber": "^8.13.7",
     "axios": "^1.6.8",
     "buffer": "^6.0.3",
     "cheerio": "^1.0.0-rc.12",
@@ -19,12 +21,14 @@
     "dompurify": "^3.0.10",
     "js-base64": "^3.7.7",
     "leaflet": "^1.9.4",
+    "maath": "^0.10.4",
     "mongodb": "^6.16.0",
     "mongoose": "^8.14.3",
     "next": "15.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
+    "three": "^0.154.0",
     "transformers": "^3.1.0",
     "uuid": "^9.0.1"
   },

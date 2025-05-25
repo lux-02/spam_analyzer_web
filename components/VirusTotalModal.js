@@ -18,7 +18,7 @@ export default function VirusTotalModal({
 
   // IP 주소가 변경되면 데이터 초기화
   useEffect(() => {
-    if (results?.ip_address) {
+    if (results?.ip) {
       setGraphData(null);
       setGraphError(null);
       setPortScanData(null);
@@ -29,7 +29,7 @@ export default function VirusTotalModal({
         setPortScanData(results.portScanInfo);
       }
     }
-  }, [results?.ip_address, results?.portScanInfo]);
+  }, [results?.ip, results?.portScanInfo]);
 
   // 모달이 닫힐 때 데이터 초기화
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function VirusTotalModal({
   // VT Graph 생성 함수
   const createGraph = async () => {
     // IP 주소만 처리 가능
-    if (!results || !results.ip_address) {
+    if (!results || !results.ip) {
       setGraphError("IP 주소에 대해서만 VT Graph를 생성할 수 있습니다.");
       return;
     }
@@ -56,10 +56,10 @@ export default function VirusTotalModal({
     setGraphData(null); // 기존 그래프 데이터 초기화
 
     try {
-      console.log("그래프 생성 요청:", results.ip_address);
+      console.log("그래프 생성 요청:", results.ip);
 
       const response = await axios.post("/api/proxy-vt-graph", {
-        node_id: results.ip_address,
+        node_id: results.ip,
         node_type: "ip_address",
       });
 
@@ -83,7 +83,7 @@ export default function VirusTotalModal({
   // 포트 스캔 요청 함수
   const requestPortScan = async () => {
     // IP 주소만 처리 가능
-    if (!results || !results.ip_address) {
+    if (!results || !results.ip) {
       setPortScanError("IP 주소에 대해서만 포트 스캔을 수행할 수 있습니다.");
       return;
     }
@@ -92,12 +92,10 @@ export default function VirusTotalModal({
     setPortScanError(null);
 
     try {
-      console.log("포트 스캔 요청:", results.ip_address);
+      console.log("포트 스캔 요청:", results.ip);
 
       // Flask 서버로 직접 요청 또는 Next.js API 경로를 통한 요청
-      const response = await axios.get(
-        `/api/analyze-ip?ip=${results.ip_address}`
-      );
+      const response = await axios.get(`/api/analyze-ip?ip=${results.ip}`);
 
       if (response.data && response.data.portScanInfo) {
         console.log("포트 스캔 성공:", response.data.portScanInfo);
@@ -171,14 +169,14 @@ export default function VirusTotalModal({
           ) : results ? (
             <>
               {/* URL이 IP로 변환된 경우 표시 */}
-              {results.is_url_converted && results.ip_address && (
+              {results.is_url_converted && results.ip && (
                 <div className="mb-4 bg-blue-50 dark:bg-blue-900 p-3 rounded text-blue-800 dark:text-blue-300">
                   <p>
                     <strong>참고:</strong> URL을 IP 주소로 변환하여
                     분석했습니다.
                   </p>
                   <p className="text-sm mt-1">
-                    원본: {results.original_target} → IP: {results.ip_address}
+                    원본: {results.original_target} → IP: {results.ip}
                   </p>
                 </div>
               )}
@@ -222,7 +220,7 @@ export default function VirusTotalModal({
                     )}
 
                     {/* IP 주소가 있는 경우에만 VT Graph 버튼 표시 */}
-                    {results.ip_address && (
+                    {results.ip && (
                       <div>
                         {!graphData && !loadingGraph ? (
                           <button
@@ -261,8 +259,8 @@ export default function VirusTotalModal({
                   <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-4">
                     <h3 className="font-bold text-lg mb-2">VirusTotal Graph</h3>
                     <p className="text-gray-700 dark:text-gray-300 mb-4">
-                      IP 주소 <strong>{results.ip_address}</strong>에 대한
-                      VirusTotal 관계 그래프입니다.
+                      IP 주소 <strong>{results.ip}</strong>에 대한 VirusTotal
+                      관계 그래프입니다.
                     </p>
 
                     <div className="text-left">
@@ -323,7 +321,7 @@ export default function VirusTotalModal({
               </div>
 
               {/* 포트 스캔 섹션 */}
-              {results.ip_address && (
+              {results.ip && (
                 <div className="mb-6">
                   <h3 className="text-xl font-bold mb-4">
                     포트 스캔 및 배너그랩

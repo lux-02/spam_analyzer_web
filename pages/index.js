@@ -97,7 +97,7 @@ export default function Home() {
             <Link href="https://shinto-map.vercel.app/" className={styles.card}>
               <h2>神社マップ</h2>
               <p>
-                일본의 명소인 신사 위치와 상세 정보를 제공하는 인터랙티브 웹
+                일본 신사 위치와 상세 정보를 제공하는 인터랙티브 웹
                 서비스입니다.
               </p>
             </Link>
@@ -115,6 +115,10 @@ export default function Home() {
             <Link href="/404" className={styles.card}>
               <h2>DARKWEB OSINT</h2>
               <p>딥다크웹 정보 수집 및 알림 시스템입니다.</p>
+            </Link>
+            <Link href="/404" className={styles.card}>
+              <h2>✦ PROFILE</h2>
+              <p>CERTIFICATE & AWARD & PROJECT</p>
             </Link>
           </div>
         </main>
