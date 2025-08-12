@@ -9,19 +9,14 @@ import {
   analyzeEmailIntent,
 } from "@/utils/emailAnalyzer";
 import { isValidEmailRawData } from "@/utils/validators";
-import { connectToDatabase, AnalysisResult } from "@/utils/db";
 
-// API 키 설정 (환경 변수에서 가져오거나 기본값 사용)
-const API_KEYS = (process.env.EXTERNAL_API_KEYS || "")
-  .split(",")
-  .filter(Boolean);
-const DEFAULT_API_KEY =
-  process.env.DEFAULT_API_KEY || "dark-winter-lab-api-key";
+// API 키 설정
+const DEFAULT_API_KEY = "dark-winter-lab-api-key";
 
 // CORS 미들웨어 초기화
 const cors = Cors({
   methods: ["POST", "OPTIONS"],
-  origin: "*", // 실제 배포 시 허용된 도메인으로 제한해야 합니다
+  origin: "*",
 });
 
 // CORS 미들웨어 실행 함수
@@ -34,33 +29,6 @@ function runMiddleware(req, res, fn) {
       return resolve(result);
     });
   });
-}
-
-// 결과 저장 함수
-async function saveResult(id, data) {
-  try {
-    // MongoDB에 저장
-    await connectToDatabase();
-
-    // id로 기존 데이터 조회
-    const existingResult = await AnalysisResult.findOne({ id });
-
-    if (existingResult) {
-      // 기존 데이터 업데이트
-      await AnalysisResult.updateOne({ id }, data);
-      console.log(`기존 분석 결과 업데이트 완료 (ID: ${id})`);
-    } else {
-      // 새 데이터 저장
-      const newResult = new AnalysisResult(data);
-      await newResult.save();
-      console.log(`새 분석 결과 저장 완료 (ID: ${id})`);
-    }
-
-    return true;
-  } catch (error) {
-    console.error("MongoDB 결과 저장 오류:", error);
-    return false;
-  }
 }
 
 export default async function handler(req, res) {
@@ -76,12 +44,7 @@ export default async function handler(req, res) {
     const { rawData, apiKey } = req.body;
 
     // API 키 검증
-    const isValidApiKey =
-      API_KEYS.length > 0
-        ? API_KEYS.includes(apiKey)
-        : apiKey === DEFAULT_API_KEY;
-
-    if (!isValidApiKey) {
+    if (apiKey !== DEFAULT_API_KEY) {
       console.warn("유효하지 않은 API 키 요청:", apiKey || "없음");
       return res.status(401).json({ error: "유효하지 않은 API 키입니다." });
     }
@@ -107,7 +70,7 @@ export default async function handler(req, res) {
     const headerAnalysis = analyzeEmailHeader(rawData);
     console.log("이메일 헤더 분석 완료");
 
-    // 이메일 본문 및 링크 분석 - 오류 처리 추가
+    // 이메일 본문 및 링크 분석
     let bodyAnalysis = { body: "", links: [] };
     try {
       bodyAnalysis = parseEmailBodyAndLinks(rawData);
@@ -134,16 +97,12 @@ export default async function handler(req, res) {
       console.error("비콘 이미지 체크 오류:", beaconError);
     }
 
-    // LLM 이메일 내용 분석
+    // LLM 이메일 내용 분석 (간소화)
     let llmAnalysis = null;
     try {
       if (bodyAnalysis.body) {
         llmAnalysis = await analyzeEmailIntent(bodyAnalysis.body);
-        console.log(
-          "LLM 이메일 내용 분석 완료:",
-          llmAnalysis?.category,
-          llmAnalysis?.confidence
-        );
+        console.log("LLM 이메일 내용 분석 완료:", llmAnalysis?.category);
       }
     } catch (llmError) {
       console.error("LLM 이메일 내용 분석 오류:", llmError);
@@ -162,8 +121,8 @@ export default async function handler(req, res) {
       beacons,
       llmAnalysis,
       timestamp: new Date().toISOString(),
-      source: "external-api",
-      apiKey: apiKey, // API 키 저장 (분석 출처 식별용)
+      source: "test-external-api",
+      apiKey: apiKey,
     };
 
     // 위험도 계산
@@ -174,7 +133,7 @@ export default async function handler(req, res) {
     });
     console.log("위험도 계산 완료");
 
-    // 최종 분석 결과
+    // 최종 분석 결과 (메모리에만 저장)
     const finalResult = {
       ...analysisData,
       risk: riskAnalysis,
@@ -182,40 +141,35 @@ export default async function handler(req, res) {
       rawData: rawData,
     };
 
-    // 결과 저장 (MongoDB) - 임시로 메모리에 저장
-    try {
-      const saveSuccess = await saveResult(id, finalResult);
-      if (saveSuccess) {
-        console.log(`분석 결과 저장 완료 (ID: ${id})`);
-      } else {
-        console.warn(`분석 결과 저장 실패, 메모리에 임시 저장 (ID: ${id})`);
-        // 메모리에 임시 저장
-        global.tempAnalysisResults = global.tempAnalysisResults || {};
-        global.tempAnalysisResults[id] = finalResult;
-      }
-    } catch (saveError) {
-      console.error(
-        `분석 결과 저장 오류, 메모리에 임시 저장 (ID: ${id}):`,
-        saveError
-      );
-      // MongoDB 저장 실패 시 메모리에 저장
-      global.tempAnalysisResults = global.tempAnalysisResults || {};
-      global.tempAnalysisResults[id] = finalResult;
-    }
+    // 메모리에 임시 저장 (실제 운영에서는 데이터베이스 사용)
+    global.tempAnalysisResults = global.tempAnalysisResults || {};
+    global.tempAnalysisResults[id] = finalResult;
+
+    console.log(`분석 결과 임시 저장 완료 (ID: ${id})`);
 
     // 응답에 분석 결과 ID와 결과 페이지 URL 포함
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "https://darkwinterlab.com";
+    const baseUrl = "https://darkwinterlab.com";
     const resultUrl = `${baseUrl}/naver/email/${id}`;
 
     return res.status(200).json({
       success: true,
-      id,
-      resultUrl,
-      message: "분석이 완료되었습니다.",
+      id: id,
+      resultUrl: resultUrl,
+      message: "이메일 분석이 완료되었습니다.",
+      analysisData: {
+        riskScore: riskAnalysis.score,
+        riskLevel: riskAnalysis.level,
+        category: llmAnalysis?.category || "분석 중",
+        linksCount: bodyAnalysis.links.length,
+        attachmentsCount: attachments.length,
+        beaconsCount: beacons.length,
+      },
     });
   } catch (error) {
-    console.error("이메일 분석 오류:", error);
-    return res.status(500).json({ error: "서버 내부 오류가 발생했습니다." });
+    console.error("분석 처리 오류:", error);
+    return res.status(500).json({
+      error: "분석 처리 중 오류가 발생했습니다.",
+      message: error.message,
+    });
   }
 }

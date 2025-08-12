@@ -1,6 +1,19 @@
 "use client";
 
-import { useRef, useState, useEffect, createContext, useContext } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+  useMemo,
+  useCallback,
+} from "react";
+import {
+  handleMediaError,
+  handleWebGLContextLoss,
+} from "../utils/errorHandler";
+
 import { Canvas, extend, useFrame, useThree } from "@react-three/fiber";
 import {
   Text,
@@ -22,280 +35,406 @@ extend(geometry);
 // 클릭 상태를 공유하기 위한 컨텍스트
 const ClickContext = createContext(false);
 
-// 프로필 데이터 샘플
-const profileData = [
+// 포트폴리오 데이터
+// - 이미지: Google Cloud Storage URL
+// - 비디오: Google Drive Sharing URL
+// - 오디오: Google Drive Sharing URL
+
+//
+const portfolioData = [
   {
-    category: "CERTIFICATE",
-    items: [
+    title: "OYE 인트로 영상",
+    description:
+      "브랜드 소개를 위한 인터랙티브 인트로 영상입니다. 모던한 디자인과 부드러운 애니메이션이 특징입니다.",
+    mediaFiles: [
       {
-        title: "정보처리기사 (필기 합격)",
-        organization: "한국산업인력공단",
-        date: "2025.03",
-      },
-      {
-        title: "디지털포렌식전문가 2급 (필기 합격)",
-        organization: "(사)한국포렌식학회",
-        date: "2023.10",
-      },
-      {
-        title: "정보기기운용기능사",
-        organization: "한국산업인력공단",
-        date: "2022.12",
-      },
-      {
-        title: "멀티미디어콘텐츠제작전문가",
-        organization: "한국산업인력공단",
-        date: "2022.11",
-      },
-      {
-        title: "유통관리사 2급",
-        organization: "대한상공회의소",
-        date: "2022.09",
-      },
-      {
-        title: "정보처리산업기사",
-        organization: "한국산업인력공단",
-        date: "2022.07",
-      },
-      {
-        title: "SMAT 서비스경영 1급 [컨설턴트]",
-        organization: "한국생산성본부",
-        date: "2021.12",
-      },
-      {
-        title: "Azure Data Fundamentals",
-        organization: "Microsoft",
-        date: "2021.05",
-      },
-      {
-        title: "Power Platform Fundamentals",
-        organization: "Microsoft",
-        date: "2021.05",
-      },
-      {
-        title: "Azure AI Fundamentals",
-        organization: "Microsoft",
-        date: "2021.05",
-      },
-      {
-        title: "메이커교육운용사 2급",
-        organization: "한국U러닝연합회",
-        date: "2021.01",
-      },
-      {
-        title: "Azure Fundamentals",
-        organization: "Microsoft",
-        date: "2020.11",
-      },
-      {
-        title: "DSAC 데이터 사이언티스트 자격 2급 [전문가]",
-        organization: "한국생산성본부",
-        date: "2020.09",
-      },
-      {
-        title: "정보처리기능사",
-        organization: "한국산업인력공단",
-        date: "2020.07",
-      },
-      {
-        title: "Microsoft Office Specialist 2016 Master",
-        organization: "Microsoft",
-        date: "2020.06",
-      },
-      {
-        title: "GTQ 그래픽 기술자격 1급",
-        organization: "한국생산성본부",
-        date: "2020.03",
-      },
-      {
-        title: "컴퓨터그래픽스운용기능사",
-        organization: "한국산업인력공단",
-        date: "2019.12",
-      },
-      {
-        title: "웹디자인기능사",
-        organization: "한국산업인력공단",
-        date: "2019.09",
+        type: "image",
+        url: "https://storage.googleapis.com/designarc/portfolio/2882bceb-78c1-4914-82de-11a728313276.webp",
+        alt: "OYE 인트로 이미지",
+        originalName: "oye_intro.webp",
+        size: 303564,
       },
     ],
   },
   {
-    category: "Activities",
-    items: [
+    title: "오디오 작품",
+    description:
+      "음악 및 사운드 디자인 작품입니다. 고품질 오디오 파일을 안정적으로 스트리밍할 수 있습니다.",
+    mediaFiles: [
       {
-        title: "2025 부산 유엔위크 서포터즈 유엔즈(UNs)",
-        organization: "부산글로벌도시재단",
-        date: "2025.04 ~ 2025.12",
+        type: "audio",
+        url: "https://drive.google.com/file/d/1MLggkRkICqZav9Apb_hxCki6e6THc4Ub/view?usp=sharing", // 예시 ID
+        alt: "barren.wav",
+        originalName: "barren.wav",
+        size: 31424708,
       },
+    ],
+  },
+  {
+    title: "프로젝트 데모 영상",
+    description:
+      "실제 프로젝트 작동 모습을 보여주는 데모 영상입니다. Google Drive에 업로드된 영상을 임베드로 표시합니다.",
+    mediaFiles: [
       {
-        title: "유엔평화기념관 제11기 글로벌 서포터즈",
-        organization: "유엔평화기념관",
-        date: "2025.04 ~ 2026.03",
-      },
-      {
-        title: "Supertone Play AI Contents Partners",
-        organization: "SUPERTON",
-        date: "2025.04 ~ 2025.06",
-      },
-      {
-        title: "한국장학재단 파란사다리 2유형 필리핀 과정",
-        organization: "한국장학재단",
-        date: "2024.06 ~ 2024.12",
-      },
-      {
-        title:
-          "한이음 ICT 멘토링 <#24_HF048 인공지능을 사용한 홈페이지 자동 제작 플랫폼>",
-        organization: "정보통신기획평가원",
-        date: "2024.04 ~ 2024.12",
-      },
-      {
-        title: "NAVER Privacy Enhancement Reward",
-        organization: "NAVER",
-        date: "2024.02 ~ 2025.12",
-      },
-      {
-        title: "RESAT UIUX 디자인 챌린지 8기",
-        organization: "RESAT",
-        date: "2024.01 ~ 2024.01",
-      },
-      {
-        title: "RESAT 브랜드 마케팅 챌린지 8기",
-        organization: "RESAT",
-        date: "2024.01 ~ 2024.01",
-      },
-      {
-        title: "RESAT 서비스 기획 챌린지 8기",
-        organization: "RESAT",
-        date: "2024.01 ~ 2024.01",
-      },
-      {
-        title: "2023 노들컬처아카데미 <무대기술 스태프 아카데미 - 무대조명>",
-        organization: "인터파크",
-        date: "2023.11 ~ 2023.11",
-      },
-      {
-        title: "상상마당아카데미 - 프로젝션 맵핑의 시작",
-        organization: "KT&G상상마당",
-        date: "2023.11 ~ 2023.12",
-      },
-      {
-        title: "NAVER AI Rush 2023 Ambassador",
-        organization: "NAVER CLOUD",
-        date: "2023.09 ~ 2023.12",
-      },
-      {
-        title: "2023 차세대 보안리더 양성 프로그램 화이트햇 스쿨 1기",
-        organization: "한국정보기술연구원",
-        date: "2023.09 ~ 2024.03",
-      },
-      {
-        title:
-          "구름톤 트레이닝 Goorm x S2W - 정보 보호 전문가 양성 마스터 클래스 2회차",
-        organization: "주식회사 구름",
-        date: "2023.08 ~ 2024.02",
-      },
-      {
-        title: "RESAT 파밍챌린지 프론트엔드 개발자편 1기",
-        organization: "RESAT",
-        date: "2023.06 ~ 2023.06",
-      },
-      {
-        title:
-          "모두의연구소 풀잎스쿨 - '기초부터 시작하는 C언어와 기초수학 (11주)’",
-        organization: "모두의연구소",
-        date: "2023.06 ~ 2023.08",
-      },
-      {
-        title:
-          "한이음 ICT 멘토링 <#23_HF367 메타버스를 활용한 라이프 로깅 서비스 개발>",
-        organization: "정보통신기획평가원",
-        date: "2023.04 ~ 2023.12",
-      },
-      {
-        title: "BOOSTCOURSE AI BASIC COACHING STUDY : 2023",
-        organization: "NAVER BOOSTCOURSE",
-        date: "2023.01 ~ 2023.02",
-      },
-      {
-        title: "BOOSTCOURSE DATA SCIENCE COACHING STUDY : 2022",
-        organization: "NAVER BOOSTCOURSE",
-        date: "2022.10 ~ 2022.11",
-      },
-      {
-        title: "Numble Research - 모바일뱅크 플랫폼 데이터 리서치 프로젝트",
-        organization: "NUMBLE",
-        date: "2022.07 ~ 2022.09",
-      },
-      {
-        title: "BOOSTCOURSE HTML/CSS COACHING STUDY : 1st",
-        organization: "NAVER BOOSTCOURSE",
-        date: "2022.05 ~ 2022.06",
-      },
-      {
-        title: "스파르타 디자이너 맴버십 1기",
-        organization: "스파르타",
-        date: "2022.03 ~ 2022.12",
-      },
-      {
-        title: "BOOSTCOURSE AI BASIC COACHING STUDY : 1st",
-        organization: "NAVER BOOSTCOURSE",
-        date: "2022.01 ~ 2022.02",
-      },
-      {
-        title: "22 BASIC CHALLENGE - IOS Track",
-        organization: "컴공선배",
-        date: "2022.01 ~ 2022.01",
-      },
-      {
-        title: "NIPA 정보통신산업진흥원 - 군 인공지능 교육 고급과정(언어)",
-        organization: "정보통신산업진흥원",
-        date: "2021.10 ~ 2021.11",
-      },
-      {
-        title:
-          "NIPA 정보통신산업진흥원 - AI 온라인 실무 응용 교육과정 (60시간 과정)",
-        organization: "정보통신산업진흥원",
-        date: "2021.09 ~ 2021.10",
-      },
-      {
-        title:
-          "NIPA 정보통신산업진흥원 - AI 온라인 실무 기본 교육과정 (60시간 과정)",
-        organization: "정보통신산업진흥원",
-        date: "2021.09 ~ 2021.09",
-      },
-      {
-        title: "The Republic of Korea's Air Force",
-        organization: "대한민국 공군",
-        date: "2021.07 ~ 2023.04",
-      },
-      {
-        title: "Kaggle 방구석 머신러닝 스터디잼 with GDG Busan",
-        organization: "Google Developer Group Busan",
-        date: "2021.04 ~ 2021.04",
-      },
-      {
-        title: "2020 한국제품안전관리원 대학생 제품안전 홍보단",
-        organization: "한국제품안전관리원",
-        date: "2020.10 ~ 2020.12",
-      },
-      {
-        title: "BOOSTCOURSE 부스트 코딩뉴비 챌린지 2020 Summer: CS50",
-        organization: "NAVER BOOSTCOURSE",
-        date: "2020.07 ~ 2020.08",
-      },
-      {
-        title: "DIGIT 라이노 아카데미 1기",
-        organization: "DIGIT",
-        date: "2020.07 ~ 2020.07",
-      },
-      {
-        title: "Goorm DevelUP Season 1",
-        organization: "주식회사 구름",
-        date: "2019.09 ~ 2019.12",
+        type: "video",
+        url: "https://drive.google.com/file/d/1CzlPCi9nwntaKspJImp7Ar6ZYIE1EwG5/view?usp=sharing",
+        alt: "프로젝트 데모 영상",
+        originalName: "demo-video.mp4",
+        size: 50000000, // 50MB
       },
     ],
   },
 ];
+
+// 미디어 파일 타입 확인 함수
+const getMediaType = (url) => {
+  const extension = url.split(".").pop().toLowerCase().split("?")[0];
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) return "image";
+  if (["mp4", "webm", "ogg"].includes(extension)) return "video";
+  if (["mp3", "m4a", "wav", "ogg"].includes(extension)) return "audio";
+  return "unknown";
+};
+
+// Google Drive 공유 링크를 직접 접근 가능한 URL로 변환하는 함수
+const convertGoogleDriveUrl = (url, mediaType = "image") => {
+  // Google Drive 공유 링크 패턴: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+  const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    const fileId = driveMatch[1];
+
+    if (mediaType === "video" || mediaType === "audio") {
+      // 비디오/오디오의 경우 임베드 URL 사용 (더 안정적)
+      return `https://drive.google.com/file/d/${fileId}/preview`;
+    } else {
+      // 이미지의 경우 직접 다운로드 URL
+      return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    }
+  }
+  return url;
+};
+
+// 미디어 URL을 적절한 형태로 변환하는 함수
+const getMediaUrl = (originalUrl, mediaType = "image") => {
+  // Google Drive URL 처리
+  if (originalUrl.includes("drive.google.com")) {
+    return convertGoogleDriveUrl(originalUrl, mediaType);
+  }
+
+  // GCS URL 처리 (이미지와 오디오)
+  if (
+    originalUrl.includes("storage.googleapis.com") &&
+    (mediaType === "image" || mediaType === "audio")
+  ) {
+    const urlParts = originalUrl.split("/");
+    const bucketIndex =
+      urlParts.findIndex((part) => part === "storage.googleapis.com") + 1;
+    if (bucketIndex > 0 && urlParts.length > bucketIndex + 1) {
+      const path = urlParts.slice(bucketIndex + 1).join("/");
+      return `/api/gcs-image?path=${encodeURIComponent(path)}`;
+    }
+  }
+
+  return originalUrl;
+};
+
+// 하위 호환성을 위한 별칭
+const getImageUrl = (originalUrl) => getMediaUrl(originalUrl, "image");
+
+// 미디어 컴포넌트
+const MediaComponent = React.memo(({ media, containerWidth }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  const handleLoad = () => setIsLoading(false);
+  const handleError = (error) => {
+    setIsLoading(false);
+    setHasError(true);
+    // 구조화된 에러 처리
+    handleMediaError(media.type, media.url, error);
+  };
+
+  const mediaStyle = {
+    width: "100%",
+    maxWidth: "100%",
+    height: "auto",
+    marginBottom: "0",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+  };
+
+  if (hasError) {
+    return (
+      <div
+        style={{
+          ...mediaStyle,
+          height: "200px",
+          backgroundColor: "#333",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#999",
+          fontSize: "14px",
+        }}
+      >
+        미디어를 로드할 수 없습니다
+      </div>
+    );
+  }
+
+  switch (media.type) {
+    case "image":
+      return (
+        <div>
+          <div style={{ position: "relative" }}>
+            {isLoading && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: "200px",
+                  backgroundColor: "rgba(0, 0, 0, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "12px",
+                  flexDirection: "column",
+                }}
+              >
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    border: "4px solid rgba(232, 176, 89, 0.3)",
+                    borderTop: "4px solid #E8B059",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                    marginBottom: "10px",
+                  }}
+                />
+                <span style={{ color: "#E8B059", fontSize: "14px" }}>
+                  이미지 로딩 중...
+                </span>
+              </div>
+            )}
+            <img
+              src={getMediaUrl(media.url, media.type)}
+              alt={media.alt}
+              style={{
+                ...mediaStyle,
+                display: isLoading ? "none" : "block",
+                borderRadius: "12px",
+              }}
+              onLoad={handleLoad}
+              onError={handleError}
+            />
+          </div>
+        </div>
+      );
+    case "video":
+      const videoUrl = getMediaUrl(media.url, "video");
+      const isGoogleDrive = media.url.includes("drive.google.com");
+
+      return (
+        <div>
+          {/* 로딩 스피너 */}
+          {isLoading && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: isGoogleDrive ? "300px" : "200px",
+                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                borderRadius: "12px",
+                marginBottom: "10px",
+                flexDirection: "column",
+              }}
+            >
+              <div
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  border: "4px solid rgba(232, 176, 89, 0.3)",
+                  borderTop: "4px solid #E8B059",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite",
+                  marginBottom: "10px",
+                }}
+              />
+              <span style={{ color: "#E8B059", fontSize: "14px" }}>
+                비디오 로딩 중...
+              </span>
+            </div>
+          )}
+
+          {/* 비디오 플레이어 */}
+          <div style={{ display: isLoading ? "none" : "block" }}>
+            {isGoogleDrive ? (
+              // Google Drive 비디오는 iframe으로 임베드
+              <div
+                style={{
+                  position: "relative",
+                  paddingBottom: "56.25%",
+                  height: 0,
+                }}
+              >
+                <iframe
+                  src={videoUrl}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                    borderRadius: "12px",
+                  }}
+                  allow="autoplay"
+                  onLoad={handleLoad}
+                  onError={handleError}
+                />
+              </div>
+            ) : (
+              // 일반 비디오는 video 태그 사용
+              <video
+                src={videoUrl}
+                controls
+                style={{
+                  ...mediaStyle,
+                  borderRadius: "12px",
+                }}
+                onLoadedData={handleLoad}
+                onError={handleError}
+              >
+                브라우저가 비디오를 지원하지 않습니다.
+              </video>
+            )}
+          </div>
+        </div>
+      );
+    case "audio":
+      const audioUrl = getMediaUrl(media.url, "audio");
+      const isGoogleDriveAudio = media.url.includes("drive.google.com");
+
+      return (
+        <div
+          style={{
+            padding: "20px",
+          }}
+        >
+          {/* 로딩 스피너 */}
+          {isLoading && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "60px",
+                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                borderRadius: "8px",
+                marginBottom: "10px",
+              }}
+            >
+              <div
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  border: "3px solid rgba(232, 176, 89, 0.3)",
+                  borderTop: "3px solid #E8B059",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite",
+                  marginRight: "10px",
+                }}
+              />
+              <span style={{ color: "#E8B059", fontSize: "14px" }}>
+                오디오 로딩 중...
+              </span>
+            </div>
+          )}
+
+          {/* 오디오 플레이어 */}
+          <div style={{ display: isLoading ? "none" : "block" }}>
+            {isGoogleDriveAudio ? (
+              // Google Drive 오디오는 iframe으로 임베드
+              <div style={{ width: "100%", height: "60px" }}>
+                <iframe
+                  src={audioUrl}
+                  style={{
+                    width: "100%",
+                    height: "60px",
+                    border: "none",
+                    borderRadius: "8px",
+                  }}
+                  allow="autoplay"
+                  onLoad={handleLoad}
+                  onError={handleError}
+                />
+              </div>
+            ) : (
+              // 일반 오디오는 audio 태그 사용
+              <audio
+                src={audioUrl}
+                controls
+                style={{
+                  width: "100%",
+                  height: "40px",
+                  borderRadius: "8px",
+                }}
+                onLoadedData={handleLoad}
+                onError={handleError}
+                crossOrigin="anonymous"
+              >
+                브라우저가 오디오를 지원하지 않습니다.
+              </audio>
+            )}
+          </div>
+
+          {/* 오류 발생 시 안내 메시지 */}
+          {hasError && (
+            <div
+              style={{
+                marginTop: "10px",
+                padding: "15px",
+                backgroundColor: "rgba(255, 107, 107, 0.1)",
+                border: "1px solid rgba(255, 107, 107, 0.3)",
+                borderRadius: "8px",
+                fontSize: "13px",
+                color: "#FF6B6B",
+              }}
+            >
+              <div style={{ fontWeight: "600", marginBottom: "5px" }}>
+                ⚠️ 오디오 로드 실패
+              </div>
+              <div
+                style={{ fontSize: "11px", color: "rgba(255, 107, 107, 0.8)" }}
+              >
+                {media.url.includes("storage.googleapis.com")
+                  ? "GCS 403 오류: Google Drive 사용을 권장합니다"
+                  : "Google Drive 사용을 권장합니다"}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    default:
+      return (
+        <div
+          style={{
+            ...mediaStyle,
+            height: "100px",
+            backgroundColor: "#333",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#999",
+          }}
+        >
+          지원하지 않는 파일 형식입니다
+        </div>
+      );
+  }
+});
 
 // 라운드 코너 쉐이더 정의
 const vertexShader = `
@@ -351,7 +490,20 @@ export default function Scene3D() {
       }}
     >
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 20], fov: 50 }}>
+        <Canvas
+          dpr={[1, 1.5]}
+          camera={{ position: [0, 0, 20], fov: 50 }}
+          gl={{
+            preserveDrawingBuffer: true,
+            antialias: true,
+            alpha: true,
+            powerPreference: "high-performance",
+          }}
+          onCreated={({ gl }) => {
+            // WebGL 컨텍스트 손실 처리
+            handleWebGLContextLoss(gl.domElement);
+          }}
+        >
           <color attach="background" args={["#121212"]} />
           <ambientLight intensity={0.5} />
           <pointLight position={[10, 10, 10]} intensity={0.5} />
@@ -379,84 +531,146 @@ export default function Scene3D() {
               justifyContent: "center",
               alignItems: "center",
               zIndex: 1000,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              backdropFilter: "blur(5px)",
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              backdropFilter: "blur(10px)",
+              padding: "10px",
+              boxSizing: "border-box",
             }}
             onClick={handleClosePopup}
           >
             <div
               style={{
-                width: "400px",
-                backgroundColor: "#222",
-                borderRadius: "15px",
-                padding: "30px",
-                boxShadow: "0 0 20px rgba(232, 176, 89, 0.3)",
-                border: "1px solid rgba(232, 176, 89, 0.5)",
+                width: "95%",
+                maxWidth: "800px",
+                maxHeight: "95%",
+                backgroundColor: "#1a1a1a",
+                borderRadius: "20px",
+                padding: "0",
+                boxShadow:
+                  "0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(232, 176, 89, 0.2)",
+                border: "2px solid rgba(232, 176, 89, 0.3)",
                 display: "flex",
                 flexDirection: "column",
-                alignItems: "center",
                 position: "relative",
+                overflow: "hidden",
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <button
+              {/* 헤더 */}
+              <div
                 style={{
-                  position: "absolute",
-                  top: "15px",
-                  right: "15px",
-                  width: "30px",
-                  height: "30px",
-                  borderRadius: "50%",
-                  background: "rgba(0,0,0,0.3)",
-                  border: "none",
-                  color: "white",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  transition: "background 0.2s",
-                }}
-                onClick={handleClosePopup}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.background = "rgba(232, 176, 89, 0.6)")
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.background = "rgba(0,0,0,0.3)")
-                }
-              >
-                ✕
-              </button>
-              <h2
-                style={{
-                  color: "white",
-                  fontSize: "24px",
-                  marginBottom: "15px",
-                  textAlign: "center",
+                  padding: "25px 30px",
+                  borderBottom: "2px solid rgba(232, 176, 89, 0.2)",
+                  position: "relative",
+                  background:
+                    "linear-gradient(135deg, rgba(232, 176, 89, 0.1), rgba(232, 176, 89, 0.05))",
                 }}
               >
-                {activeCard.title}
-              </h2>
-              <h3
+                <button
+                  style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "20px",
+                    width: "35px",
+                    height: "35px",
+                    borderRadius: "50%",
+                    background: "rgba(232, 176, 89, 0.2)",
+                    border: "1px solid rgba(232, 176, 89, 0.5)",
+                    color: "white",
+                    fontSize: "18px",
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    transition: "all 0.3s ease",
+                  }}
+                  onClick={handleClosePopup}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background =
+                      "rgba(232, 176, 89, 0.8)";
+                    e.currentTarget.style.transform = "scale(1.1)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background =
+                      "rgba(232, 176, 89, 0.2)";
+                    e.currentTarget.style.transform = "scale(1)";
+                  }}
+                >
+                  ✕
+                </button>
+                <h2
+                  style={{
+                    color: "white",
+                    fontSize: "28px",
+                    margin: "0",
+                    paddingRight: "60px",
+                    fontWeight: "600",
+                    textShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  {activeCard.title}
+                </h2>
+              </div>
+
+              {/* 스크롤 가능한 콘텐츠 영역 */}
+              <div
                 style={{
-                  color: "white",
-                  fontSize: "18px",
-                  fontWeight: "normal",
-                  marginBottom: "20px",
-                  textAlign: "center",
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "30px",
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "rgba(232, 176, 89, 0.5) transparent",
                 }}
               >
-                {activeCard.organization}
-              </h3>
-              <p
-                style={{
-                  color: "#E8B059",
-                  fontSize: "16px",
-                  textAlign: "center",
-                }}
-              >
-                {activeCard.date}
-              </p>
+                {/* 설명 텍스트 */}
+                <div
+                  style={{
+                    color: "#e0e0e0",
+                    fontSize: "18px",
+                    lineHeight: "1.7",
+                    marginBottom: "30px",
+                    padding: "20px",
+                  }}
+                >
+                  {activeCard.description}
+                </div>
+
+                {/* 미디어 파일들 */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "20px",
+                  }}
+                >
+                  {activeCard.mediaFiles &&
+                    activeCard.mediaFiles.map((media, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          transition: "all 0.3s ease",
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor =
+                            "rgba(232, 176, 89, 0.1)";
+                          e.currentTarget.style.borderColor =
+                            "rgba(232, 176, 89, 0.3)";
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor =
+                            "rgba(255, 255, 255, 0.03)";
+                          e.currentTarget.style.borderColor =
+                            "rgba(255, 255, 255, 0.1)";
+                        }}
+                      >
+                        <MediaComponent
+                          media={media}
+                          containerWidth={740} // 최대 너비에서 패딩을 뺀 값
+                        />
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -501,26 +715,21 @@ function Scene({ children, ...props }) {
 
   return (
     <group ref={ref} {...props}>
-      {profileData.map((category, idx) => (
-        <Cards
-          key={category.category}
-          category={category.category}
-          items={category.items}
-          from={idx * (Math.PI / 2)}
-          len={Math.PI / 2}
-          position={[0, idx * 0.4 - 0.4, 0]}
-          onCardHover={setHovered}
-          onCardClick={onCardClick}
-          hoveredCard={hovered}
-          isAnyCardActive={isCardActive}
-        />
-      ))}
+      <Cards
+        items={portfolioData}
+        from={0}
+        len={Math.PI * 2}
+        position={[0, 0, 0]}
+        onCardHover={setHovered}
+        onCardClick={onCardClick}
+        hoveredCard={hovered}
+        isAnyCardActive={isCardActive}
+      />
     </group>
   );
 }
 
 function Cards({
-  category,
   items,
   from = 0,
   len = Math.PI * 2,
@@ -532,35 +741,9 @@ function Cards({
   ...props
 }) {
   const amount = items.length;
-  const textPosition = from + len / 2;
 
   return (
     <group {...props}>
-      <Billboard
-        position={[
-          Math.sin(textPosition) * radius * 1.4,
-          0.6,
-          Math.cos(textPosition) * radius * 1.4,
-        ]}
-        follow={true}
-        lockX={false}
-        lockY={false}
-        lockZ={false}
-        visible={!isAnyCardActive}
-      >
-        <group>
-          <Text
-            fontSize={0.5}
-            anchorX="center"
-            color="#ffffff"
-            outlineWidth={0.01}
-            outlineColor="#E8B059"
-          >
-            {category}
-          </Text>
-        </group>
-      </Billboard>
-
       {items.map((item, i) => {
         const angle = from + (i / amount) * len;
         return (
@@ -597,6 +780,73 @@ function Card({ item, hovered, isAnyCardActive, angle, onClick, ...props }) {
   const ref = useRef();
   const materialRef = useRef();
   const { camera } = useThree();
+  const [thumbnailTexture, setThumbnailTexture] = useState(null);
+
+  // 첫 번째 이미지 파일을 썸네일로 사용
+  const thumbnailImage = item.mediaFiles?.find(
+    (media) => media.type === "image"
+  );
+
+  useEffect(() => {
+    if (thumbnailImage) {
+      const loader = new THREE.TextureLoader();
+
+      // 이미지 로딩 처리
+      const loadImage = async () => {
+        try {
+          loader.load(
+            getMediaUrl(thumbnailImage.url, thumbnailImage.type),
+            (texture) => {
+              texture.wrapS = THREE.ClampToEdgeWrapping;
+              texture.wrapT = THREE.ClampToEdgeWrapping;
+              texture.minFilter = THREE.LinearFilter;
+              texture.magFilter = THREE.LinearFilter;
+              setThumbnailTexture(texture);
+            },
+            undefined,
+            (error) => {
+              console.warn("썸네일 로드 실패, 기본 이미지 사용:", error);
+              // 기본 이미지로 대체
+              createDefaultTexture();
+            }
+          );
+        } catch (error) {
+          console.warn("이미지 로드 중 오류:", error);
+          createDefaultTexture();
+        }
+      };
+
+      // 기본 텍스처 생성 함수
+      const createDefaultTexture = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 256;
+        const context = canvas.getContext("2d");
+
+        // 그라데이션 배경 생성
+        const gradient = context.createLinearGradient(0, 0, 256, 256);
+        gradient.addColorStop(0, "#E8B059");
+        gradient.addColorStop(1, "#D4A043");
+
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 256, 256);
+
+        // 텍스트 추가
+        context.fillStyle = "#FFFFFF";
+        context.font = "24px Arial";
+        context.textAlign = "center";
+        context.fillText("Portfolio", 128, 120);
+        context.fillText("Image", 128, 150);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        setThumbnailTexture(texture);
+      };
+
+      loadImage();
+    }
+  }, [thumbnailImage]);
 
   useFrame((state, delta) => {
     if (!ref.current) return;
@@ -648,32 +898,42 @@ function Card({ item, hovered, isAnyCardActive, angle, onClick, ...props }) {
               }}
             />
           </mesh>
+
+          {/* 썸네일 이미지 */}
+          {thumbnailTexture && (
+            <mesh position={[0, 0.1, 0.01]}>
+              <planeGeometry args={[0.7, 0.4]} />
+              <meshBasicMaterial
+                map={thumbnailTexture}
+                transparent
+                opacity={0.9}
+              />
+            </mesh>
+          )}
+
+          {/* 제목 */}
           <Text
-            position={[0, 0.2, 0.01]}
-            fontSize={0.09}
+            position={[0, thumbnailTexture ? -0.15 : 0.2, 0.01]}
+            fontSize={0.08}
             color="#ffffff"
             anchorX="center"
             anchorY="middle"
+            maxWidth={0.9}
           >
             {item.title}
           </Text>
+
+          {/* 미디어 타입 표시 */}
           <Text
-            position={[0, 0, 0.01]}
-            fontSize={0.07}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {item.organization}
-          </Text>
-          <Text
-            position={[0, -0.2, 0.01]}
-            fontSize={0.06}
+            position={[0, thumbnailTexture ? -0.3 : -0.2, 0.01]}
+            fontSize={0.05}
             color="#aaaaaa"
             anchorX="center"
             anchorY="middle"
           >
-            {item.date}
+            {item.mediaFiles && item.mediaFiles.length > 0
+              ? `${item.mediaFiles.length}개 파일`
+              : "파일 없음"}
           </Text>
 
           {/* 카드 테두리 효과 */}

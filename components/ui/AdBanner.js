@@ -4,6 +4,11 @@ const AdBanner = ({ slot, format = "auto", responsive = true, style = {} }) => {
   const adRef = useRef(null);
 
   useEffect(() => {
+    // 개발 환경에서는 AdSense 로드하지 않음 (403 오류 방지)
+    if (process.env.NODE_ENV === "development") {
+      return;
+    }
+
     // AdSense가 로드된 후 광고 로드
     if (window.adsbygoogle && adRef.current) {
       try {
@@ -13,6 +18,19 @@ const AdBanner = ({ slot, format = "auto", responsive = true, style = {} }) => {
       }
     }
   }, []);
+
+  // 개발 환경에서는 광고 대신 플레이스홀더 표시
+  if (process.env.NODE_ENV === "development") {
+    return (
+      <div className="ad-container my-4 p-4 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg text-center">
+        <p className="text-gray-500">
+          📢 개발 환경 - AdSense 광고 플레이스홀더
+          <br />
+          <small>프로덕션에서는 실제 광고가 표시됩니다</small>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="ad-container my-4">

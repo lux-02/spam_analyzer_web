@@ -13,8 +13,19 @@ export default async function handler(req, res) {
 
   console.log(`ID ${id}에 대한 분석 결과 요청`);
 
-  // MongoDB에서 분석 결과 조회
-  const result = await getResult(id);
+  // 먼저 메모리에서 확인
+  let result = null;
+  if (global.tempAnalysisResults && global.tempAnalysisResults[id]) {
+    console.log(`메모리에서 분석 결과 발견 (ID: ${id})`);
+    result = global.tempAnalysisResults[id];
+  } else {
+    // MongoDB에서 분석 결과 조회
+    try {
+      result = await getResult(id);
+    } catch (dbError) {
+      console.warn(`MongoDB 조회 오류 (ID: ${id}):`, dbError);
+    }
+  }
 
   if (!result) {
     console.log(`API Error: ID ${id}에 대한 분석 결과 없음`);
