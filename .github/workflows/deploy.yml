@@ -126,7 +126,8 @@ jobs:
             # 서버 재시작
             pkill -f 'next-server' || echo 'No server was running' &&
             sleep 3 &&
-            nohup npm start > next.log 2>&1 & &&
+            nohup npm start > next.log 2>&1 &
+            sleep 2 &&
             # 헬스 체크
             sleep 5 &&
             if pgrep -f 'next-server' > /dev/null; then
