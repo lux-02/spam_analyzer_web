@@ -101,83 +101,52 @@ jobs:
           --zone=us-central1-c \
           --quiet
           
-        # 배포 스크립트 생성 및 업로드
-        cat > /tmp/deploy-script.sh << 'EOF'
-#!/bin/bash
-set -e
-cd ~/apps/spam_analyzer_web
-
-# 백업 생성
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-mkdir -p ~/backups
-if [ -d "." ]; then
-  cp -r . ~/backups/spam_analyzer_web-$TIMESTAMP 2>/dev/null || true
-  echo "✅ Backup created: ~/backups/spam_analyzer_web-$TIMESTAMP"
-fi
-
-# 환경 변수 백업
-if [ -f ".env.local" ]; then
-  cp .env.local /tmp/.env.local.backup
-fi
-
-# 새 코드 추출
-tar -xzf ~/deployment.tar.gz
-
-# 환경 변수 복원
-if [ -f "/tmp/.env.local.backup" ]; then
-  cp /tmp/.env.local.backup .env.local
-  rm /tmp/.env.local.backup
-fi
-
-# macOS 메타데이터 파일 정리
-find . -name '._*' -delete 2>/dev/null || true
-
-# 의존성 설치
-npm ci --production --silent
-
-# 빌드
-npm run build
-
-# 서버 재시작
-pkill -f "next-server" || echo "No server was running"
-sleep 3
-nohup npm start > next.log 2>&1 &
-
-# 헬스 체크
-sleep 5
-if pgrep -f "next-server" > /dev/null; then
-  echo "✅ Server started successfully"
-  
-  # 로컬 헬스 체크
-  for i in {1..5}; do
-    if curl -s -f http://localhost:3000 > /dev/null; then
-      echo "✅ Application is responding"
-      break
-    else
-      echo "⏳ Health check attempt $i/5..."
-      sleep 2
-    fi
-  done
-else
-  echo "❌ Server failed to start"
-  echo "📋 Last 10 lines of server log:"
-  tail -10 next.log || echo "No log file found"
-  exit 1
-fi
-
-# 정리
-rm -f ~/deployment.tar.gz
-echo "🎉 Deployment completed successfully!"
-EOF
-        
-        # 배포 스크립트 업로드 및 실행
-        gcloud compute scp /tmp/deploy-script.sh instance-20250812-075321:~/deploy-script.sh \
-          --zone=us-central1-c \
-          --quiet
-          
+        # 배포 실행
         gcloud compute ssh instance-20250812-075321 \
           --zone=us-central1-c \
-          --command="chmod +x ~/deploy-script.sh && ~/deploy-script.sh" \
+          --command="
+            cd ~/apps/spam_analyzer_web &&
+            # 백업 생성
+            TIMESTAMP=\$(date +%Y%m%d-%H%M%S) &&
+            mkdir -p ~/backups &&
+            cp -r . ~/backups/spam_analyzer_web-\$TIMESTAMP 2>/dev/null || true &&
+            echo '✅ Backup created: ~/backups/spam_analyzer_web-'\$TIMESTAMP &&
+            # 환경 변수 백업
+            if [ -f '.env.local' ]; then cp .env.local /tmp/.env.local.backup; fi &&
+            # 새 코드 추출
+            tar -xzf ~/deployment.tar.gz &&
+            # 환경 변수 복원
+            if [ -f '/tmp/.env.local.backup' ]; then cp /tmp/.env.local.backup .env.local && rm /tmp/.env.local.backup; fi &&
+            # macOS 메타데이터 파일 정리
+            find . -name '._*' -delete 2>/dev/null || true &&
+            # 의존성 설치
+            npm ci --production --silent &&
+            # 빌드
+            npm run build &&
+            # 서버 재시작
+            pkill -f 'next-server' || echo 'No server was running' &&
+            sleep 3 &&
+            nohup npm start > next.log 2>&1 & &&
+            # 헬스 체크
+            sleep 5 &&
+            if pgrep -f 'next-server' > /dev/null; then
+              echo '✅ Server started successfully' &&
+              for i in {1..5}; do
+                if curl -s -f http://localhost:3000 > /dev/null; then
+                  echo '✅ Application is responding' && break
+                else
+                  echo '⏳ Health check attempt '\$i'/5...' && sleep 2
+                fi
+              done
+            else
+              echo '❌ Server failed to start' &&
+              tail -10 next.log 2>/dev/null || echo 'No log file found' &&
+              exit 1
+            fi &&
+            # 정리
+            rm -f ~/deployment.tar.gz &&
+            echo '🎉 Deployment completed successfully!'
+          " \
           --quiet
           
     - name: Verify deployment
