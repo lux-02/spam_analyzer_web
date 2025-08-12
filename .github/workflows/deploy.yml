@@ -26,10 +26,35 @@ jobs:
     - name: Build application
       run: npm run build
       
+    - name: Debug Secrets
+      run: |
+        echo "Checking if GCP_SA_KEY is set..."
+        if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+          echo "❌ GCP_SA_KEY is not set or empty"
+          exit 1
+        else
+          echo "✅ GCP_SA_KEY is set (length: $(echo '${{ secrets.GCP_SA_KEY }}' | wc -c))"
+        fi
+        
+        echo "Checking if GCP_PROJECT_ID is set..."
+        if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+          echo "❌ GCP_PROJECT_ID is not set or empty"
+          exit 1
+        else
+          echo "✅ GCP_PROJECT_ID is set: ${{ secrets.GCP_PROJECT_ID }}"
+        fi
+      
     - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+      run: |
+        # 서비스 계정 키를 파일로 저장
+        echo "$GOOGLE_CREDENTIALS" > /tmp/gcp-sa-key.json
+        chmod 600 /tmp/gcp-sa-key.json
+        
+        # gcloud 인증
+        gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
+        gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
         
     - name: Setup Google Cloud CLI
       uses: google-github-actions/setup-gcloud@v2
@@ -152,7 +177,7 @@ jobs:
         
     - name: Clean up
       run: |
-        rm -f /tmp/gcp-key /tmp/deploy-script.sh
+        rm -f /tmp/gcp-key /tmp/gcp-sa-key.json /tmp/deploy-script.sh
         rm -rf /tmp/deployment
         
     - name: Notify deployment status
