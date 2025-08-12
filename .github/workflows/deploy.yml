@@ -26,19 +26,19 @@ jobs:
     - name: Build application
       run: npm run build
       
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
     - name: Setup Google Cloud CLI
       uses: google-github-actions/setup-gcloud@v2
       with:
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         
-    - name: Configure SSH and GCP Auth
+    - name: Configure SSH
       run: |
-        # GCP 서비스 계정 키 설정
-        echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-sa-key.json
-        chmod 600 /tmp/gcp-sa-key.json
-        
-        # SSH 키 설정 (필요한 경우)
+        # SSH 키 설정
         echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > /tmp/gcp-key
         chmod 600 /tmp/gcp-key
         
@@ -71,10 +71,6 @@ jobs:
             
     - name: Deploy to GCP Instance
       run: |
-        # gcloud auth 설정
-        gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
-        gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-        
         # 배포 파일 업로드
         gcloud compute scp deployment.tar.gz instance-20250812-075321:~/deployment.tar.gz \
           --zone=us-central1-c \
@@ -156,7 +152,7 @@ jobs:
         
     - name: Clean up
       run: |
-        rm -f /tmp/gcp-key /tmp/gcp-sa-key.json /tmp/deploy-script.sh
+        rm -f /tmp/gcp-key /tmp/deploy-script.sh
         rm -rf /tmp/deployment
         
     - name: Notify deployment status
