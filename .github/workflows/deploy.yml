@@ -61,11 +61,11 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         
-    - name: Configure SSH
+    - name: Configure OS Login
       run: |
-        # SSH 키 설정
-        echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > /tmp/gcp-key
-        chmod 600 /tmp/gcp-key
+        # OS Login 활성화 확인
+        gcloud config set compute/oslogin true
+        echo "✅ OS Login configured for secure authentication"
         
     - name: Create deployment package
       run: |
@@ -96,62 +96,79 @@ jobs:
             
     - name: Deploy to GCP Instance
       run: |
-        # 배포 파일 업로드
+        # OS Login 사용하여 배포 파일 업로드
         gcloud compute scp deployment.tar.gz instance-20250812-075321:~/deployment.tar.gz \
           --zone=us-central1-c \
           --quiet
           
-        # 배포 스크립트 업로드
-        echo '#!/bin/bash
-        set -e
-        cd ~/apps/spam_analyzer_web
-        
-        # 백업 생성
-        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        mkdir -p ~/backups
-        if [ -d "." ]; then
-          cp -r . ~/backups/spam_analyzer_web-$TIMESTAMP 2>/dev/null || true
-          echo "✅ Backup created: ~/backups/spam_analyzer_web-$TIMESTAMP"
-        fi
-        
-        # 환경 변수 백업
-        if [ -f ".env.local" ]; then
-          cp .env.local /tmp/.env.local.backup
-        fi
-        
-        # 새 코드 추출
-        tar -xzf ~/deployment.tar.gz
-        
-        # 환경 변수 복원
-        if [ -f "/tmp/.env.local.backup" ]; then
-          cp /tmp/.env.local.backup .env.local
-          rm /tmp/.env.local.backup
-        fi
-        
-        # 의존성 설치
-        npm ci --production --silent
-        
-        # 빌드
-        npm run build
-        
-        # 서버 재시작
-        pkill -f "next-server" || echo "No server was running"
-        sleep 3
-        nohup npm start > next.log 2>&1 &
-        
-        # 헬스 체크
-        sleep 5
-        if pgrep -f "next-server" > /dev/null; then
-          echo "✅ Server started successfully"
-        else
-          echo "❌ Server failed to start"
-          exit 1
-        fi
-        
-        # 정리
-        rm -f ~/deployment.tar.gz
-        echo "🎉 Deployment completed successfully!"
-        ' > /tmp/deploy-script.sh
+        # 배포 스크립트 생성 및 업로드
+        cat > /tmp/deploy-script.sh << 'EOF'
+#!/bin/bash
+set -e
+cd ~/apps/spam_analyzer_web
+
+# 백업 생성
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p ~/backups
+if [ -d "." ]; then
+  cp -r . ~/backups/spam_analyzer_web-$TIMESTAMP 2>/dev/null || true
+  echo "✅ Backup created: ~/backups/spam_analyzer_web-$TIMESTAMP"
+fi
+
+# 환경 변수 백업
+if [ -f ".env.local" ]; then
+  cp .env.local /tmp/.env.local.backup
+fi
+
+# 새 코드 추출
+tar -xzf ~/deployment.tar.gz
+
+# 환경 변수 복원
+if [ -f "/tmp/.env.local.backup" ]; then
+  cp /tmp/.env.local.backup .env.local
+  rm /tmp/.env.local.backup
+fi
+
+# macOS 메타데이터 파일 정리
+find . -name '._*' -delete 2>/dev/null || true
+
+# 의존성 설치
+npm ci --production --silent
+
+# 빌드
+npm run build
+
+# 서버 재시작
+pkill -f "next-server" || echo "No server was running"
+sleep 3
+nohup npm start > next.log 2>&1 &
+
+# 헬스 체크
+sleep 5
+if pgrep -f "next-server" > /dev/null; then
+  echo "✅ Server started successfully"
+  
+  # 로컬 헬스 체크
+  for i in {1..5}; do
+    if curl -s -f http://localhost:3000 > /dev/null; then
+      echo "✅ Application is responding"
+      break
+    else
+      echo "⏳ Health check attempt $i/5..."
+      sleep 2
+    fi
+  done
+else
+  echo "❌ Server failed to start"
+  echo "📋 Last 10 lines of server log:"
+  tail -10 next.log || echo "No log file found"
+  exit 1
+fi
+
+# 정리
+rm -f ~/deployment.tar.gz
+echo "🎉 Deployment completed successfully!"
+EOF
         
         # 배포 스크립트 업로드 및 실행
         gcloud compute scp /tmp/deploy-script.sh instance-20250812-075321:~/deploy-script.sh \
@@ -177,7 +194,7 @@ jobs:
         
     - name: Clean up
       run: |
-        rm -f /tmp/gcp-key /tmp/gcp-sa-key.json /tmp/deploy-script.sh
+        rm -f /tmp/gcp-sa-key.json /tmp/deploy-script.sh
         rm -rf /tmp/deployment
         
     - name: Notify deployment status
