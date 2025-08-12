@@ -2,176 +2,176 @@ name: Deploy to GCP
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Build application
-      run: npm run build
-      
-    - name: Debug Secrets
-      run: |
-        echo "Checking if GCP_SA_KEY is set..."
-        if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
-          echo "❌ GCP_SA_KEY is not set or empty"
-          exit 1
-        else
-          echo "✅ GCP_SA_KEY is set (length: $(echo '${{ secrets.GCP_SA_KEY }}' | wc -c))"
-        fi
-        
-        echo "Checking if GCP_PROJECT_ID is set..."
-        if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
-          echo "❌ GCP_PROJECT_ID is not set or empty"
-          exit 1
-        else
-          echo "✅ GCP_PROJECT_ID is set: ${{ secrets.GCP_PROJECT_ID }}"
-        fi
-      
-    - name: Authenticate to Google Cloud
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
-      run: |
-        # 서비스 계정 키를 파일로 저장
-        echo "$GOOGLE_CREDENTIALS" > /tmp/gcp-sa-key.json
-        chmod 600 /tmp/gcp-sa-key.json
-        
-        # gcloud 인증
-        gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
-        gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-        
-    - name: Setup Google Cloud CLI
-      uses: google-github-actions/setup-gcloud@v2
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        
-    - name: Configure gcloud
-      run: |
-        # gcloud 설정 확인
-        gcloud config list
-        echo "✅ gcloud configured successfully"
-        
-    - name: Create deployment package
-      run: |
-        # 배포에 필요한 파일들만 패키징 (파일 변경 오류 방지)
-        mkdir -p /tmp/deployment
-        
-        # 필요한 파일들을 임시 디렉토리에 복사
-        rsync -av \
-          --exclude='.git' \
-          --exclude='node_modules' \
-          --exclude='.next' \
-          --exclude='*.tgz' \
-          --exclude='.github' \
-          --exclude='README.md' \
-          --exclude='DEPLOY.md' \
-          --exclude='GITHUB_PUSH_GUIDE.md' \
-          --exclude='PORTFOLIO_SETUP.md' \
-          --exclude='certificates' \
-          --exclude='rex.pem' \
-          . /tmp/deployment/
-          
-        # 임시 디렉토리에서 압축
-        cd /tmp/deployment
-        tar -czf $GITHUB_WORKSPACE/deployment.tar.gz .
-        
-        # 압축 파일 크기 확인
-        ls -lh $GITHUB_WORKSPACE/deployment.tar.gz
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Debug Secrets
+        run: |
+          echo "Checking if GCP_SA_KEY is set..."
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "❌ GCP_SA_KEY is not set or empty"
+            exit 1
+          else
+            echo "✅ GCP_SA_KEY is set (length: $(echo '${{ secrets.GCP_SA_KEY }}' | wc -c))"
+          fi
+
+          echo "Checking if GCP_PROJECT_ID is set..."
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "❌ GCP_PROJECT_ID is not set or empty"
+            exit 1
+          else
+            echo "✅ GCP_PROJECT_ID is set: ${{ secrets.GCP_PROJECT_ID }}"
+          fi
+
+      - name: Authenticate to Google Cloud
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          # 서비스 계정 키를 파일로 저장
+          echo "$GOOGLE_CREDENTIALS" > /tmp/gcp-sa-key.json
+          chmod 600 /tmp/gcp-sa-key.json
+
+          # gcloud 인증
+          gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure gcloud
+        run: |
+          # gcloud 설정 확인
+          gcloud config list
+          echo "✅ gcloud configured successfully"
+
+      - name: Create deployment package
+        run: |
+          # 배포에 필요한 파일들만 패키징 (파일 변경 오류 방지)
+          mkdir -p /tmp/deployment
+
+          # 필요한 파일들을 임시 디렉토리에 복사
+          rsync -av \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='*.tgz' \
+            --exclude='.github' \
+            --exclude='README.md' \
+            --exclude='DEPLOY.md' \
+            --exclude='GITHUB_PUSH_GUIDE.md' \
+            --exclude='PORTFOLIO_SETUP.md' \
+            --exclude='certificates' \
+            --exclude='rex.pem' \
+            . /tmp/deployment/
             
-    - name: Deploy to GCP Instance
-      run: |
-        # OS Login 사용하여 배포 파일 업로드
-        gcloud compute scp deployment.tar.gz instance-20250812-075321:~/deployment.tar.gz \
-          --zone=us-central1-c \
-          --quiet
-          
-        # 배포 실행
-        gcloud compute ssh instance-20250812-075321 \
-          --zone=us-central1-c \
-          --command="
-            cd ~/apps/spam_analyzer_web &&
-            # 백업 생성
-            TIMESTAMP=\$(date +%Y%m%d-%H%M%S) &&
-            mkdir -p ~/backups &&
-            cp -r . ~/backups/spam_analyzer_web-\$TIMESTAMP 2>/dev/null || true &&
-            echo '✅ Backup created: ~/backups/spam_analyzer_web-'\$TIMESTAMP &&
-            # 환경 변수 백업
-            if [ -f '.env.local' ]; then cp .env.local /tmp/.env.local.backup; fi &&
-            # 새 코드 추출
-            tar -xzf ~/deployment.tar.gz &&
-            # 환경 변수 복원
-            if [ -f '/tmp/.env.local.backup' ]; then cp /tmp/.env.local.backup .env.local && rm /tmp/.env.local.backup; fi &&
-            # macOS 메타데이터 파일 정리
-            find . -name '._*' -delete 2>/dev/null || true &&
-            # 의존성 설치
-            npm ci --production --silent &&
-            # 빌드
-            npm run build &&
-            # 서버 재시작
-            pkill -f 'next-server' || echo 'No server was running' &&
-            sleep 3 &&
-            nohup npm start > next.log 2>&1 &
-            sleep 2 &&
-            # 헬스 체크
-            sleep 5 &&
-            if pgrep -f 'next-server' > /dev/null; then
-              echo '✅ Server started successfully' &&
-              for i in {1..5}; do
-                if curl -s -f http://localhost:3000 > /dev/null; then
-                  echo '✅ Application is responding' && break
-                else
-                  echo '⏳ Health check attempt '\$i'/5...' && sleep 2
-                fi
-              done
-            else
-              echo '❌ Server failed to start' &&
-              tail -10 next.log 2>/dev/null || echo 'No log file found' &&
-              exit 1
-            fi &&
-            # 정리
-            rm -f ~/deployment.tar.gz &&
-            echo '🎉 Deployment completed successfully!'
-          " \
-          --quiet
-          
-    - name: Verify deployment
-      run: |
-        sleep 10
-        # 서버 상태 확인
-        response=$(curl -s -o /dev/null -w "%{http_code}" https://darkwinterlab.com)
-        if [ "$response" = "200" ]; then
-          echo "✅ Deployment successful - Server is responding"
-        else
-          echo "❌ Deployment may have failed - Server responded with $response"
-          exit 1
-        fi
-        
-    - name: Clean up
-      run: |
-        rm -f /tmp/gcp-sa-key.json /tmp/deploy-script.sh
-        rm -rf /tmp/deployment
-        
-    - name: Notify deployment status
-      if: always()
-      run: |
-        if [ "${{ job.status }}" = "success" ]; then
-          echo "🚀 Deployment to https://darkwinterlab.com completed successfully!"
-        else
-          echo "❌ Deployment failed. Check the logs above."
-        fi
+          # 임시 디렉토리에서 압축
+          cd /tmp/deployment
+          tar -czf $GITHUB_WORKSPACE/deployment.tar.gz .
+
+          # 압축 파일 크기 확인
+          ls -lh $GITHUB_WORKSPACE/deployment.tar.gz
+
+      - name: Deploy to GCP Instance
+        run: |
+          # OS Login 사용하여 배포 파일 업로드
+          gcloud compute scp deployment.tar.gz instance-20250812-075321:~/deployment.tar.gz \
+            --zone=us-central1-c \
+            --quiet
+            
+          # 배포 실행
+          gcloud compute ssh instance-20250812-075321 \
+            --zone=us-central1-c \
+            --command="
+              cd ~/apps/spam_analyzer_web &&
+              # 백업 생성
+              TIMESTAMP=\$(date +%Y%m%d-%H%M%S) &&
+              mkdir -p ~/backups &&
+              cp -r . ~/backups/spam_analyzer_web-\$TIMESTAMP 2>/dev/null || true &&
+              echo '✅ Backup created: ~/backups/spam_analyzer_web-'\$TIMESTAMP &&
+              # 환경 변수 백업
+              if [ -f '.env.local' ]; then cp .env.local /tmp/.env.local.backup; fi &&
+              # 새 코드 추출
+              tar -xzf ~/deployment.tar.gz &&
+              # 환경 변수 복원
+              if [ -f '/tmp/.env.local.backup' ]; then cp /tmp/.env.local.backup .env.local && rm /tmp/.env.local.backup; fi &&
+              # macOS 메타데이터 파일 정리
+              find . -name '._*' -delete 2>/dev/null || true &&
+              # 의존성 설치
+              npm ci --production --silent &&
+              # 빌드
+              npm run build &&
+              # 서버 재시작
+              pkill -f 'next-server' || echo 'No server was running' &&
+              sleep 3 &&
+              nohup npm start > next.log 2>&1 &
+              sleep 2 &&
+              # 헬스 체크
+              sleep 5 &&
+              if pgrep -f 'next-server' > /dev/null; then
+                echo '✅ Server started successfully' &&
+                for i in {1..5}; do
+                  if curl -s -f http://localhost:3000 > /dev/null; then
+                    echo '✅ Application is responding' && break
+                  else
+                    echo '⏳ Health check attempt '\$i'/5...' && sleep 2
+                  fi
+                done
+              else
+                echo '❌ Server failed to start' &&
+                tail -10 next.log 2>/dev/null || echo 'No log file found' &&
+                exit 1
+              fi &&
+              # 정리
+              rm -f ~/deployment.tar.gz &&
+              echo '🎉 Deployment completed successfully!'
+            " \
+            --quiet
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          # 서버 상태 확인
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://darkwinterlab.com)
+          if [ "$response" = "200" ]; then
+            echo "✅ Deployment successful - Server is responding"
+          else
+            echo "❌ Deployment may have failed - Server responded with $response"
+            exit 1
+          fi
+
+      - name: Clean up
+        run: |
+          rm -f /tmp/gcp-sa-key.json /tmp/deploy-script.sh
+          rm -rf /tmp/deployment
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "🚀 Deployment to https://darkwinterlab.com completed successfully!"
+          else
+            echo "❌ Deployment failed. Check the logs above."
+          fi
