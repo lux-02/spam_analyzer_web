@@ -1,0 +1,107 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        
+    - name: Configure SSH
+      run: |
+        echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > /tmp/gcp-key
+        chmod 600 /tmp/gcp-key
+        
+    - name: Create deployment package
+      run: |
+        # 배포에 필요한 파일들만 패키징
+        tar --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='*.tgz' \
+            --exclude='.github' \
+            --exclude='README.md' \
+            --exclude='DEPLOY.md' \
+            --exclude='GITHUB_PUSH_GUIDE.md' \
+            --exclude='PORTFOLIO_SETUP.md' \
+            -czf deployment.tar.gz .
+            
+    - name: Deploy to GCP Instance
+      run: |
+        # SSH를 통해 배포 실행
+        gcloud compute scp deployment.tar.gz instance-20250812-075321:~/deployment.tar.gz \
+          --zone=us-central1-c \
+          --ssh-key-file=/tmp/gcp-key \
+          --quiet
+          
+        # 서버에서 배포 실행
+        gcloud compute ssh instance-20250812-075321 \
+          --zone=us-central1-c \
+          --ssh-key-file=/tmp/gcp-key \
+          --command="
+            cd ~/apps/spam_analyzer_web &&
+            # 기존 파일 백업
+            cp -r . ../backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true &&
+            # 새 파일 추출
+            tar -xzf ~/deployment.tar.gz &&
+            # 의존성 설치
+            npm ci --production &&
+            # 빌드
+            npm run build &&
+            # 서버 재시작
+            pkill -f 'next-server' || true &&
+            sleep 3 &&
+            nohup npm start > next.log 2>&1 & &&
+            echo 'Deployment completed successfully'
+          " \
+          --quiet
+          
+    - name: Verify deployment
+      run: |
+        sleep 10
+        # 서버 상태 확인
+        response=$(curl -s -o /dev/null -w "%{http_code}" https://darkwinterlab.com)
+        if [ "$response" = "200" ]; then
+          echo "✅ Deployment successful - Server is responding"
+        else
+          echo "❌ Deployment may have failed - Server responded with $response"
+          exit 1
+        fi
+        
+    - name: Clean up
+      run: |
+        rm -f /tmp/gcp-key
+        
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "🚀 Deployment to https://darkwinterlab.com completed successfully!"
+        else
+          echo "❌ Deployment failed. Check the logs above."
+        fi
