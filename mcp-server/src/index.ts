@@ -278,7 +278,7 @@ class SpamAnalyzerMCPServer {
       });
 
       // JSON-RPC 어댑터 (ChatGPT 연동용)
-      this.httpServer.post('/jsonrpc', async (req, res) => {
+      this.httpServer.post("/jsonrpc", async (req, res) => {
         try {
           const { jsonrpc, method, params, id } = req.body;
 
@@ -286,7 +286,7 @@ class SpamAnalyzerMCPServer {
             return res.status(400).json({
               jsonrpc: "2.0",
               error: { code: -32600, message: "Invalid Request" },
-              id: id || null
+              id: id || null,
             });
           }
 
@@ -299,70 +299,74 @@ class SpamAnalyzerMCPServer {
                 capabilities: {
                   tools: { listChanged: false },
                   resources: { subscribe: false, listChanged: false },
-                  prompts: { listChanged: false }
+                  prompts: { listChanged: false },
                 },
                 serverInfo: {
                   name: "spam-analyzer-mcp-server",
-                  version: "1.0.0"
-                }
+                  version: "1.0.0",
+                },
               };
               break;
 
             case "tools/list":
               result = {
-                tools: allTools.map(tool => ({
+                tools: allTools.map((tool) => ({
                   name: tool.name,
                   description: tool.description,
-                  inputSchema: tool.inputSchema
-                }))
+                  inputSchema: tool.inputSchema,
+                })),
               };
               break;
 
             case "tools/call":
               const { name: toolName, arguments: toolArgs } = params;
-              
+
               if (!allToolHandlers[toolName as keyof typeof allToolHandlers]) {
                 throw new Error(`Unknown tool: ${toolName}`);
               }
 
-              const toolResult = await allToolHandlers[toolName as keyof typeof allToolHandlers](toolArgs);
+              const toolResult = await allToolHandlers[
+                toolName as keyof typeof allToolHandlers
+              ](toolArgs);
               result = {
                 content: [
                   {
                     type: "text",
-                    text: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2)
-                  }
-                ]
+                    text:
+                      typeof toolResult === "string"
+                        ? toolResult
+                        : JSON.stringify(toolResult, null, 2),
+                  },
+                ],
               };
               break;
 
             default:
               return res.status(400).json({
                 jsonrpc: "2.0",
-                error: { 
-                  code: -32601, 
-                  message: `Method not found: ${method}. Supported: initialize, tools/list, tools/call` 
+                error: {
+                  code: -32601,
+                  message: `Method not found: ${method}. Supported: initialize, tools/list, tools/call`,
                 },
-                id: id || null
+                id: id || null,
               });
           }
 
           res.json({
             jsonrpc: "2.0",
             result,
-            id: id || null
+            id: id || null,
           });
-
         } catch (error) {
-          console.error('JSON-RPC Error:', error);
+          console.error("JSON-RPC Error:", error);
           res.json({
             jsonrpc: "2.0",
             error: {
               code: -32603,
               message: "Internal error",
-              data: error instanceof Error ? error.message : String(error)
+              data: error instanceof Error ? error.message : String(error),
             },
-            id: req.body?.id || null
+            id: req.body?.id || null,
           });
         }
       });
