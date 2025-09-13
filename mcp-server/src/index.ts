@@ -271,6 +271,27 @@ class SpamAnalyzerMCPServer {
         });
       });
 
+      // 루트 엔드포인트 (MCP 서버 정보)
+      this.httpServer.get("/", (req, res) => {
+        res.json({
+          server: "spam-analyzer-mcp-server",
+          version: "1.0.0",
+          description: "이메일 스팸/피싱 분석을 위한 MCP 서버",
+          protocol: "Model Context Protocol",
+          endpoints: {
+            jsonrpc: "POST /jsonrpc",
+            health: "GET /health", 
+            tools: "GET /tools",
+            docs: "GET /docs"
+          },
+          usage: {
+            chatgpt: "https://darkwinterlab.com/mcp/jsonrpc",
+            cursor: "로컬 STDIO 모드 사용",
+            claude: "로컬 STDIO 모드 사용"
+          }
+        });
+      });
+
       // API 문서 엔드포인트
       this.httpServer.get("/docs", (req, res) => {
         const documentation = generateAPIDocumentation();

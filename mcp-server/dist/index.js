@@ -222,20 +222,40 @@ class SpamAnalyzerMCPServer {
                     },
                 });
             });
+            // 루트 엔드포인트 (MCP 서버 정보)
+            this.httpServer.get("/", (req, res) => {
+                res.json({
+                    server: "spam-analyzer-mcp-server",
+                    version: "1.0.0",
+                    description: "이메일 스팸/피싱 분석을 위한 MCP 서버",
+                    protocol: "Model Context Protocol",
+                    endpoints: {
+                        jsonrpc: "POST /jsonrpc",
+                        health: "GET /health",
+                        tools: "GET /tools",
+                        docs: "GET /docs"
+                    },
+                    usage: {
+                        chatgpt: "https://darkwinterlab.com/mcp/jsonrpc",
+                        cursor: "로컬 STDIO 모드 사용",
+                        claude: "로컬 STDIO 모드 사용"
+                    }
+                });
+            });
             // API 문서 엔드포인트
             this.httpServer.get("/docs", (req, res) => {
                 const documentation = generateAPIDocumentation();
                 res.json(documentation);
             });
             // JSON-RPC 어댑터 (ChatGPT 연동용)
-            this.httpServer.post('/jsonrpc', async (req, res) => {
+            this.httpServer.post("/jsonrpc", async (req, res) => {
                 try {
                     const { jsonrpc, method, params, id } = req.body;
                     if (jsonrpc !== "2.0") {
                         return res.status(400).json({
                             jsonrpc: "2.0",
                             error: { code: -32600, message: "Invalid Request" },
-                            id: id || null
+                            id: id || null,
                         });
                     }
                     let result;
@@ -246,21 +266,21 @@ class SpamAnalyzerMCPServer {
                                 capabilities: {
                                     tools: { listChanged: false },
                                     resources: { subscribe: false, listChanged: false },
-                                    prompts: { listChanged: false }
+                                    prompts: { listChanged: false },
                                 },
                                 serverInfo: {
                                     name: "spam-analyzer-mcp-server",
-                                    version: "1.0.0"
-                                }
+                                    version: "1.0.0",
+                                },
                             };
                             break;
                         case "tools/list":
                             result = {
-                                tools: allTools.map(tool => ({
+                                tools: allTools.map((tool) => ({
                                     name: tool.name,
                                     description: tool.description,
-                                    inputSchema: tool.inputSchema
-                                }))
+                                    inputSchema: tool.inputSchema,
+                                })),
                             };
                             break;
                         case "tools/call":
@@ -273,9 +293,11 @@ class SpamAnalyzerMCPServer {
                                 content: [
                                     {
                                         type: "text",
-                                        text: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2)
-                                    }
-                                ]
+                                        text: typeof toolResult === "string"
+                                            ? toolResult
+                                            : JSON.stringify(toolResult, null, 2),
+                                    },
+                                ],
                             };
                             break;
                         default:
@@ -283,27 +305,27 @@ class SpamAnalyzerMCPServer {
                                 jsonrpc: "2.0",
                                 error: {
                                     code: -32601,
-                                    message: `Method not found: ${method}. Supported: initialize, tools/list, tools/call`
+                                    message: `Method not found: ${method}. Supported: initialize, tools/list, tools/call`,
                                 },
-                                id: id || null
+                                id: id || null,
                             });
                     }
                     res.json({
                         jsonrpc: "2.0",
                         result,
-                        id: id || null
+                        id: id || null,
                     });
                 }
                 catch (error) {
-                    console.error('JSON-RPC Error:', error);
+                    console.error("JSON-RPC Error:", error);
                     res.json({
                         jsonrpc: "2.0",
                         error: {
                             code: -32603,
                             message: "Internal error",
-                            data: error instanceof Error ? error.message : String(error)
+                            data: error instanceof Error ? error.message : String(error),
                         },
-                        id: req.body?.id || null
+                        id: req.body?.id || null,
                     });
                 }
             });
