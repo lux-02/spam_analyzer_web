@@ -298,6 +298,90 @@ class SpamAnalyzerMCPServer {
         res.json(documentation);
       });
 
+      // OpenAPI 스키마 엔드포인트 (ChatGPT 연동용)
+      this.httpServer.get("/openapi.json", (req, res) => {
+        const openApiSchema = {
+          openapi: "3.1.0",
+          info: {
+            title: "DarkWinter Email Spam Analyzer",
+            description: "이메일 스팸/피싱 분석을 위한 MCP 서버",
+            version: "1.0.0"
+          },
+          servers: [
+            {
+              url: "https://darkwinterlab.com/mcp",
+              description: "Production server"
+            }
+          ],
+          paths: {
+            "/jsonrpc": {
+              post: {
+                summary: "MCP JSON-RPC 호출",
+                description: "이메일 분석을 위한 MCP 도구 호출",
+                operationId: "callMCPTool",
+                requestBody: {
+                  required: true,
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "object",
+                        properties: {
+                          jsonrpc: { type: "string", const: "2.0" },
+                          method: { type: "string", const: "tools/call" },
+                          params: {
+                            type: "object",
+                            properties: {
+                              name: {
+                                type: "string",
+                                enum: [
+                                  "mcp_comprehensive_email_analysis",
+                                  "mcp_email_analyze_headers", 
+                                  "mcp_email_analyze_content",
+                                  "mcp_email_analyze_intent",
+                                  "mcp_analyze_ip",
+                                  "mcp_virustotal_check",
+                                  "mcp_analyze_domain"
+                                ],
+                                description: "사용할 MCP 도구명"
+                              },
+                              arguments: {
+                                type: "object",
+                                description: "도구에 전달할 인수"
+                              }
+                            },
+                            required: ["name", "arguments"]
+                          },
+                          id: { type: "integer", const: 1 }
+                        },
+                        required: ["jsonrpc", "method", "params", "id"]
+                      }
+                    }
+                  }
+                },
+                responses: {
+                  "200": {
+                    description: "성공",
+                    content: {
+                      "application/json": {
+                        schema: {
+                          type: "object",
+                          properties: {
+                            jsonrpc: { type: "string" },
+                            result: { type: "object" },
+                            id: { type: "integer" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        };
+        res.json(openApiSchema);
+      });
+
       // JSON-RPC 어댑터 (ChatGPT 연동용)
       this.httpServer.post("/jsonrpc", async (req, res) => {
         try {
