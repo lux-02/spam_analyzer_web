@@ -317,7 +317,8 @@ class SpamAnalyzerMCPServer {
             "/analyze/email": {
               post: {
                 summary: "이메일 종합 분석",
-                description: "이메일의 헤더, 본문, 첨부파일을 종합적으로 분석하여 스팸/피싱 여부를 판단합니다.",
+                description:
+                  "이메일의 헤더, 본문, 첨부파일을 종합적으로 분석하여 스팸/피싱 여부를 판단합니다.",
                 operationId: "analyzeEmail",
                 requestBody: {
                   required: true,
@@ -328,7 +329,8 @@ class SpamAnalyzerMCPServer {
                         properties: {
                           rawEmailData: {
                             type: "string",
-                            description: "분석할 이메일의 원문 데이터 (헤더 포함)",
+                            description:
+                              "분석할 이메일의 원문 데이터 (헤더 포함)",
                           },
                         },
                         required: ["rawEmailData"],
@@ -345,26 +347,26 @@ class SpamAnalyzerMCPServer {
                           type: "object",
                           properties: {
                             success: { type: "boolean" },
-                            riskScore: { 
-                              type: "integer", 
+                            riskScore: {
+                              type: "integer",
                               description: "위험도 점수 (0-100)",
                               minimum: 0,
-                              maximum: 100
+                              maximum: 100,
                             },
                             riskLevel: {
                               type: "string",
                               enum: ["safe", "suspicious", "danger"],
-                              description: "위험도 레벨"
+                              description: "위험도 레벨",
                             },
                             analysis: {
                               type: "object",
-                              description: "상세 분석 결과"
+                              description: "상세 분석 결과",
                             },
                             recommendations: {
                               type: "array",
                               items: { type: "string" },
-                              description: "권장 조치사항"
-                            }
+                              description: "권장 조치사항",
+                            },
                           },
                         },
                       },
@@ -424,7 +426,7 @@ class SpamAnalyzerMCPServer {
       this.httpServer.post("/analyze/email", async (req, res) => {
         try {
           const { rawEmailData } = req.body;
-          
+
           if (!rawEmailData) {
             return res.status(400).json({
               success: false,
@@ -433,11 +435,14 @@ class SpamAnalyzerMCPServer {
           }
 
           // MCP 도구 호출
-          const result = await allToolHandlers["mcp_comprehensive_email_analysis"]({ rawEmailData });
-          
+          const result = await allToolHandlers[
+            "mcp_comprehensive_email_analysis"
+          ]({ rawEmailData });
+
           // 결과를 ChatGPT가 이해하기 쉬운 형태로 변환
-          const analysisResult = typeof result === 'string' ? JSON.parse(result) : result;
-          
+          const analysisResult =
+            typeof result === "string" ? JSON.parse(result) : result;
+
           res.json({
             success: true,
             riskScore: analysisResult.riskScore || 0,
@@ -445,9 +450,8 @@ class SpamAnalyzerMCPServer {
             analysis: analysisResult,
             recommendations: analysisResult.recommendations || [],
           });
-
         } catch (error) {
-          console.error('Email analysis error:', error);
+          console.error("Email analysis error:", error);
           res.status(500).json({
             success: false,
             error: error instanceof Error ? error.message : "Analysis failed",
@@ -458,7 +462,7 @@ class SpamAnalyzerMCPServer {
       this.httpServer.post("/analyze/ip", async (req, res) => {
         try {
           const { ipAddress } = req.body;
-          
+
           if (!ipAddress) {
             return res.status(400).json({
               success: false,
@@ -468,15 +472,14 @@ class SpamAnalyzerMCPServer {
 
           // MCP 도구 호출
           const result = await allToolHandlers["mcp_analyze_ip"]({ ipAddress });
-          
+
           res.json({
             success: true,
             ipInfo: result,
             riskLevel: "unknown", // IP 분석 결과에 따라 동적으로 설정
           });
-
         } catch (error) {
-          console.error('IP analysis error:', error);
+          console.error("IP analysis error:", error);
           res.status(500).json({
             success: false,
             error: error instanceof Error ? error.message : "Analysis failed",
