@@ -75,7 +75,8 @@ const AnalysisResultSchema = new mongoose.Schema({
     timestamps: true,
 });
 // 모델 생성 (이미 존재하는 경우 재사용)
-const AnalysisResult = mongoose.models.AnalysisResult || mongoose.model("AnalysisResult", AnalysisResultSchema);
+const AnalysisResult = mongoose.models.AnalysisResult ||
+    mongoose.model("AnalysisResult", AnalysisResultSchema);
 // 분석 결과 저장 도구
 export const saveAnalysisResultTool = {
     name: "mcp_save_analysis_result",
@@ -112,7 +113,9 @@ export async function handleSaveAnalysisResult(args) {
             },
         };
         // 기존 데이터 확인
-        const existingResult = await AnalysisResult.findOne({ id: analysisData.id });
+        const existingResult = await AnalysisResult.findOne({
+            id: analysisData.id,
+        });
         if (existingResult) {
             // 기존 데이터 업데이트
             await AnalysisResult.updateOne({ id: analysisData.id }, enrichedData);
@@ -147,7 +150,9 @@ export async function handleSaveAnalysisResult(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -211,9 +216,14 @@ export async function handleGetAnalysisResult(args) {
                             riskScore: analysisResult.risk?.score || 0,
                             createdAt: analysisResult.createdAt,
                             updatedAt: analysisResult.updatedAt,
-                            hasAttachments: analysisResult.attachments && analysisResult.attachments.length > 0,
-                            linksCount: analysisResult.links ? analysisResult.links.length : 0,
-                            ipAddressesCount: analysisResult.ipAddresses ? analysisResult.ipAddresses.length : 0,
+                            hasAttachments: analysisResult.attachments &&
+                                analysisResult.attachments.length > 0,
+                            linksCount: analysisResult.links
+                                ? analysisResult.links.length
+                                : 0,
+                            ipAddressesCount: analysisResult.ipAddresses
+                                ? analysisResult.ipAddresses.length
+                                : 0,
                         },
                         timestamp: new Date().toISOString(),
                     }, null, 2),
@@ -229,7 +239,9 @@ export async function handleGetAnalysisResult(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -287,16 +299,19 @@ export async function handleGetRecentAnalyses(args) {
         const statistics = {
             total: results.length,
             byRiskLevel: {
-                safe: results.filter(r => r.risk?.level === "safe").length,
-                suspicious: results.filter(r => r.risk?.level === "suspicious").length,
-                danger: results.filter(r => r.risk?.level === "danger").length,
+                safe: results.filter((r) => r.risk?.level === "safe").length,
+                suspicious: results.filter((r) => r.risk?.level === "suspicious")
+                    .length,
+                danger: results.filter((r) => r.risk?.level === "danger").length,
             },
             byAnalysisType: {
-                email: results.filter(r => r.analysisType === "email").length,
-                network: results.filter(r => r.analysisType === "network").length,
-                comprehensive: results.filter(r => r.analysisType === "comprehensive").length,
+                email: results.filter((r) => r.analysisType === "email").length,
+                network: results.filter((r) => r.analysisType === "network").length,
+                comprehensive: results.filter((r) => r.analysisType === "comprehensive")
+                    .length,
             },
-            averageRiskScore: results.reduce((sum, r) => sum + (r.risk?.score || 0), 0) / results.length || 0,
+            averageRiskScore: results.reduce((sum, r) => sum + (r.risk?.score || 0), 0) /
+                results.length || 0,
         };
         return {
             content: [
@@ -305,11 +320,14 @@ export async function handleGetRecentAnalyses(args) {
                     text: JSON.stringify({
                         success: true,
                         message: "최근 분석 결과 조회 완료",
-                        results: results.map(r => ({
+                        results: results.map((r) => ({
                             id: r.id,
                             timestamp: r.timestamp,
                             from: r.from,
-                            subject: r.subject ? r.subject.substring(0, 50) + (r.subject.length > 50 ? "..." : "") : null,
+                            subject: r.subject
+                                ? r.subject.substring(0, 50) +
+                                    (r.subject.length > 50 ? "..." : "")
+                                : null,
                             riskLevel: r.risk?.level,
                             riskScore: r.risk?.score,
                             analysisType: r.analysisType,
@@ -336,7 +354,9 @@ export async function handleGetRecentAnalyses(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -424,7 +444,9 @@ export async function handleExportAnalysisReport(args) {
                 rawData: {
                     analysisTimestamp: result.timestamp,
                     analysisId: result.id,
-                    originalData: format === "json" ? result.rawData : "[원문 데이터는 Markdown 형식에서만 포함됩니다]",
+                    originalData: format === "json"
+                        ? result.rawData
+                        : "[원문 데이터는 Markdown 형식에서만 포함됩니다]",
                 },
             };
             return {
@@ -468,7 +490,9 @@ export async function handleExportAnalysisReport(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -549,13 +573,21 @@ export async function handleGetAnalysisStatistics(args) {
                         statistics: {
                             total: totalResults,
                             averageRiskScore: averageRiskScore[0]?.avgScore || 0,
-                            riskLevelDistribution: Object.fromEntries(riskLevelStats.map((stat) => [stat._id || "unknown", stat.count])),
-                            analysisTypeDistribution: Object.fromEntries(analysisTypeStats.map((stat) => [stat._id || "unknown", stat.count])),
+                            riskLevelDistribution: Object.fromEntries(riskLevelStats.map((stat) => [
+                                stat._id || "unknown",
+                                stat.count,
+                            ])),
+                            analysisTypeDistribution: Object.fromEntries(analysisTypeStats.map((stat) => [
+                                stat._id || "unknown",
+                                stat.count,
+                            ])),
                             dailyTrend: dailyStats.map((stat) => ({
                                 date: stat._id,
                                 total: stat.count,
                                 dangerCount: stat.dangerCount,
-                                dangerRate: stat.count > 0 ? (stat.dangerCount / stat.count * 100).toFixed(1) : "0",
+                                dangerRate: stat.count > 0
+                                    ? ((stat.dangerCount / stat.count) * 100).toFixed(1)
+                                    : "0",
                             })),
                         },
                         insights: generateStatisticsInsights({
@@ -578,7 +610,9 @@ export async function handleGetAnalysisStatistics(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -622,7 +656,8 @@ function generateMarkdownReport(result, analysisId) {
 | DMARC | ${getStatusEmoji(result.dmarc)} ${result.dmarc || "Not Found"} |
 
 ## 위험 요소
-${result.risk?.factors?.map((factor) => `- ⚠️ ${factor}`).join('\n') || "- ✅ 발견된 위험 요소가 없습니다"}
+${result.risk?.factors?.map((factor) => `- ⚠️ ${factor}`).join("\n") ||
+        "- ✅ 발견된 위험 요소가 없습니다"}
 
 ## 네트워크 분석
 - **IP 주소**: ${result.ipAddresses?.length || 0}개 발견
@@ -634,23 +669,29 @@ ${result.risk?.factors?.map((factor) => `- ⚠️ ${factor}`).join('\n') || "- �
 - **첨부파일**: ${result.attachments?.length || 0}개 발견
 - **본문 길이**: ${result.body ? result.body.length : 0} 문자
 
-${result.llmAnalysis ? `
+${result.llmAnalysis
+        ? `
 ## AI 분석 결과
 - **분류**: ${result.llmAnalysis.category}
 - **신뢰도**: ${result.llmAnalysis.confidence}
 - **모델**: ${result.llmAnalysis.model_used}
 - **분석 내용**: ${result.llmAnalysis.reason}
-` : ''}
+`
+        : ""}
 
 ## 상세 정보
 ### 수신 경로
-${result.receivedPaths?.map((path, index) => `${index + 1}. ${path}`).join('\n') || "수신 경로 정보 없음"}
+${result.receivedPaths
+        ?.map((path, index) => `${index + 1}. ${path}`)
+        .join("\n") || "수신 경로 정보 없음"}
 
 ### IP 주소 목록
-${result.ipAddresses?.map((ip) => `- ${ip}`).join('\n') || "IP 주소 정보 없음"}
+${result.ipAddresses?.map((ip) => `- ${ip}`).join("\n") ||
+        "IP 주소 정보 없음"}
 
 ### 링크 목록
-${result.links?.map((link) => `- ${link}`).join('\n') || "링크 정보 없음"}
+${result.links?.map((link) => `- ${link}`).join("\n") ||
+        "링크 정보 없음"}
 
 ---
 *이 보고서는 자동으로 생성되었습니다. 추가 분석이나 문의사항이 있으시면 보안팀에 연락하세요.*
@@ -658,19 +699,28 @@ ${result.links?.map((link) => `- ${link}`).join('\n') || "링크 정보 없음"}
 }
 function getRiskLevelEmoji(level) {
     switch (level) {
-        case "danger": return "🔴";
-        case "suspicious": return "🟠";
-        case "safe": return "🟢";
-        default: return "⚪";
+        case "danger":
+            return "🔴";
+        case "suspicious":
+            return "🟠";
+        case "safe":
+            return "🟢";
+        default:
+            return "⚪";
     }
 }
 function getStatusEmoji(status) {
     switch (status) {
-        case "pass": return "✅";
-        case "fail": return "❌";
-        case "softfail": return "⚠️";
-        case "none": return "❓";
-        default: return "❓";
+        case "pass":
+            return "✅";
+        case "fail":
+            return "❌";
+        case "softfail":
+            return "⚠️";
+        case "none":
+            return "❓";
+        default:
+            return "❓";
     }
 }
 function generateStatisticsInsights(data) {
@@ -682,7 +732,7 @@ function generateStatisticsInsights(data) {
     }
     // 위험도 분포 분석
     const dangerCount = riskLevelStats.find((s) => s._id === "danger")?.count || 0;
-    const dangerRate = (dangerCount / total * 100).toFixed(1);
+    const dangerRate = ((dangerCount / total) * 100).toFixed(1);
     if (dangerCount > 0) {
         insights.push(`⚠️ 전체 분석 중 ${dangerRate}% (${dangerCount}개)가 위험한 이메일로 분류되었습니다.`);
     }
@@ -701,7 +751,7 @@ function generateStatisticsInsights(data) {
         }
     }
     // 평균 분석량
-    const avgDaily = (total / parseInt(timeRange.replace('d', ''))).toFixed(1);
+    const avgDaily = (total / parseInt(timeRange.replace("d", ""))).toFixed(1);
     insights.push(`📊 일평균 ${avgDaily}개의 이메일이 분석되었습니다.`);
     return insights;
 }

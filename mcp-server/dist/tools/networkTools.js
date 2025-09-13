@@ -125,7 +125,9 @@ export async function handleAnalyzeIp(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -159,7 +161,8 @@ export async function handleAnalyzeDomain(args) {
             const dnsResponse = await axios.get(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`);
             if (dnsResponse.data.Answer && dnsResponse.data.Answer.length > 0) {
                 for (const record of dnsResponse.data.Answer) {
-                    if (record.type === 1) { // A 레코드
+                    if (record.type === 1) {
+                        // A 레코드
                         ip = record.data;
                         break;
                     }
@@ -221,7 +224,9 @@ export async function handleAnalyzeDomain(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -477,7 +482,9 @@ export async function handleVirusTotalCheck(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -558,7 +565,9 @@ export async function handlePortScan(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -625,7 +634,8 @@ export async function handleNetworkThreatAnalysis(args) {
                         status: "completed",
                     });
                     // 위협 레벨에 따른 통계 업데이트
-                    const threatLevel = analysisResult.analysis?.threatLevel || analysisResult.ipAnalysis?.threatLevel;
+                    const threatLevel = analysisResult.analysis?.threatLevel ||
+                        analysisResult.ipAnalysis?.threatLevel;
                     if (threatLevel === "높음" || threatLevel === "매우 높음") {
                         summary.malicious_count++;
                         summary.high_risk_targets.push(target);
@@ -647,7 +657,7 @@ export async function handleNetworkThreatAnalysis(args) {
                     summary.error_count++;
                 }
                 // API 호출 제한을 위한 짧은 대기
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
             catch (error) {
                 console.error(`${target} 분석 오류:`, error);
@@ -676,7 +686,7 @@ export async function handleNetworkThreatAnalysis(args) {
                         analysis_timestamp: new Date().toISOString(),
                         performance: {
                             totalTargets: targets.length,
-                            successfulAnalyses: results.filter(r => r.status === "completed").length,
+                            successfulAnalyses: results.filter((r) => r.status === "completed").length,
                             failedAnalyses: summary.error_count,
                             highRiskFound: summary.high_risk_targets.length,
                         },
@@ -694,7 +704,9 @@ export async function handleNetworkThreatAnalysis(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -723,7 +735,9 @@ function assessIpThreatLevel(geoipData, portScanInfo) {
     // ISP 정보 기반 위험도
     if (geoipData.connection?.isp) {
         const isp = geoipData.connection.isp.toLowerCase();
-        if (isp.includes("hosting") || isp.includes("cloud") || isp.includes("vps")) {
+        if (isp.includes("hosting") ||
+            isp.includes("cloud") ||
+            isp.includes("vps")) {
             threatScore += 1;
         }
     }
@@ -793,7 +807,9 @@ function analyzeScanResults(scanResult) {
         const foundDangerousPorts = scanResult.open_ports.filter((port) => dangerousPorts.includes(port.port));
         if (foundDangerousPorts.length > 0) {
             analysis.riskLevel = "높음";
-            analysis.findings.push(`위험한 포트가 열려있음: ${foundDangerousPorts.map((p) => p.port).join(", ")}`);
+            analysis.findings.push(`위험한 포트가 열려있음: ${foundDangerousPorts
+                .map((p) => p.port)
+                .join(", ")}`);
             analysis.recommendations.push("위험한 포트들을 즉시 차단하세요");
         }
         if (scanResult.open_ports.length > 10) {
@@ -813,12 +829,12 @@ function analyzeScanResults(scanResult) {
     return analysis;
 }
 function calculatePortsScanned(portRange) {
-    const ranges = portRange.split(',');
+    const ranges = portRange.split(",");
     let totalPorts = 0;
-    ranges.forEach(range => {
-        if (range.includes('-')) {
-            const [start, end] = range.split('-').map(Number);
-            totalPorts += (end - start + 1);
+    ranges.forEach((range) => {
+        if (range.includes("-")) {
+            const [start, end] = range.split("-").map(Number);
+            totalPorts += end - start + 1;
         }
         else {
             totalPorts += 1;

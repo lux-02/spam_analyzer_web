@@ -117,8 +117,12 @@ class SpamAnalyzerMCPServer {
                     server: "spam-analyzer-mcp-server",
                     version: "1.0.0",
                     timestamp: new Date().toISOString(),
-                    capabilities: ["email-analysis", "network-analysis", "data-management"],
-                    tools: allTools.map(tool => tool.name),
+                    capabilities: [
+                        "email-analysis",
+                        "network-analysis",
+                        "data-management",
+                    ],
+                    tools: allTools.map((tool) => tool.name),
                 });
             });
             // 도구 목록 엔드포인트
@@ -213,8 +217,8 @@ class SpamAnalyzerMCPServer {
                     results,
                     summary: {
                         total: requests.length,
-                        successful: results.filter(r => r.success).length,
-                        failed: results.filter(r => !r.success).length,
+                        successful: results.filter((r) => r.success).length,
+                        failed: results.filter((r) => !r.success).length,
                     },
                 });
             });
@@ -222,6 +226,86 @@ class SpamAnalyzerMCPServer {
             this.httpServer.get("/docs", (req, res) => {
                 const documentation = generateAPIDocumentation();
                 res.json(documentation);
+            });
+            // JSON-RPC 어댑터 (ChatGPT 연동용)
+            this.httpServer.post('/jsonrpc', async (req, res) => {
+                try {
+                    const { jsonrpc, method, params, id } = req.body;
+                    if (jsonrpc !== "2.0") {
+                        return res.status(400).json({
+                            jsonrpc: "2.0",
+                            error: { code: -32600, message: "Invalid Request" },
+                            id: id || null
+                        });
+                    }
+                    let result;
+                    switch (method) {
+                        case "initialize":
+                            result = {
+                                protocolVersion: "2024-11-05",
+                                capabilities: {
+                                    tools: { listChanged: false },
+                                    resources: { subscribe: false, listChanged: false },
+                                    prompts: { listChanged: false }
+                                },
+                                serverInfo: {
+                                    name: "spam-analyzer-mcp-server",
+                                    version: "1.0.0"
+                                }
+                            };
+                            break;
+                        case "tools/list":
+                            result = {
+                                tools: allTools.map(tool => ({
+                                    name: tool.name,
+                                    description: tool.description,
+                                    inputSchema: tool.inputSchema
+                                }))
+                            };
+                            break;
+                        case "tools/call":
+                            const { name: toolName, arguments: toolArgs } = params;
+                            if (!allToolHandlers[toolName]) {
+                                throw new Error(`Unknown tool: ${toolName}`);
+                            }
+                            const toolResult = await allToolHandlers[toolName](toolArgs);
+                            result = {
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult, null, 2)
+                                    }
+                                ]
+                            };
+                            break;
+                        default:
+                            return res.status(400).json({
+                                jsonrpc: "2.0",
+                                error: {
+                                    code: -32601,
+                                    message: `Method not found: ${method}. Supported: initialize, tools/list, tools/call`
+                                },
+                                id: id || null
+                            });
+                    }
+                    res.json({
+                        jsonrpc: "2.0",
+                        result,
+                        id: id || null
+                    });
+                }
+                catch (error) {
+                    console.error('JSON-RPC Error:', error);
+                    res.json({
+                        jsonrpc: "2.0",
+                        error: {
+                            code: -32603,
+                            message: "Internal error",
+                            data: error instanceof Error ? error.message : String(error)
+                        },
+                        id: req.body?.id || null
+                    });
+                }
             });
             // 404 핸들러
             this.httpServer.use("*", (req, res) => {
@@ -234,6 +318,7 @@ class SpamAnalyzerMCPServer {
                         "POST /tools/:toolName",
                         "POST /tools/batch",
                         "GET /docs",
+                        "POST /jsonrpc",
                     ],
                 });
             });
@@ -252,7 +337,7 @@ class SpamAnalyzerMCPServer {
         console.log(`Spam Analyzer MCP Server 시작 중... (모드: ${mode})`);
         console.log(`사용 가능한 도구: ${allTools.length}개`);
         console.log("도구 목록:");
-        allTools.forEach(tool => {
+        allTools.forEach((tool) => {
             console.log(`  - ${tool.name}: ${tool.description}`);
         });
         if (mode === "HTTP" && this.httpServer) {
@@ -284,7 +369,9 @@ function generateAPIDocumentation() {
         title: "Spam Analyzer MCP Server API",
         version: "1.0.0",
         description: "이메일 보안 분석을 위한 MCP 서버 API 문서",
-        baseUrl: process.env.HTTP_MODE === "true" ? `http://${process.env.MCP_SERVER_HOST || "localhost"}:${process.env.MCP_SERVER_PORT || "3001"}` : "N/A (STDIO 모드)",
+        baseUrl: process.env.HTTP_MODE === "true"
+            ? `http://${process.env.MCP_SERVER_HOST || "localhost"}:${process.env.MCP_SERVER_PORT || "3001"}`
+            : "N/A (STDIO 모드)",
         endpoints: {
             health: {
                 method: "GET",
@@ -313,7 +400,7 @@ function generateAPIDocumentation() {
                 response: "일괄 실행 결과",
             },
         },
-        tools: allTools.map(tool => ({
+        tools: allTools.map((tool) => ({
             name: tool.name,
             description: tool.description,
             parameters: tool.inputSchema,
@@ -356,9 +443,16 @@ function generateAPIDocumentation() {
 function getToolCategory(toolName) {
     if (toolName.includes("email"))
         return "email";
-    if (toolName.includes("network") || toolName.includes("ip") || toolName.includes("domain") || toolName.includes("virustotal") || toolName.includes("port"))
+    if (toolName.includes("network") ||
+        toolName.includes("ip") ||
+        toolName.includes("domain") ||
+        toolName.includes("virustotal") ||
+        toolName.includes("port"))
         return "network";
-    if (toolName.includes("save") || toolName.includes("get") || toolName.includes("export") || toolName.includes("statistics"))
+    if (toolName.includes("save") ||
+        toolName.includes("get") ||
+        toolName.includes("export") ||
+        toolName.includes("statistics"))
         return "data";
     return "other";
 }

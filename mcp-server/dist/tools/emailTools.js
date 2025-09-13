@@ -49,7 +49,9 @@ export async function handleEmailAnalyzeHeaders(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -78,7 +80,10 @@ export async function handleEmailAnalyzeContent(args) {
         const { rawEmailData } = params;
         console.log("이메일 콘텐츠 분석 시작");
         // 본문 및 링크 분석
-        let bodyAnalysis = { body: "", links: [] };
+        let bodyAnalysis = {
+            body: "",
+            links: [],
+        };
         try {
             bodyAnalysis = parseEmailBodyAndLinks(rawEmailData);
             console.log("이메일 본문 및 링크 분석 완료");
@@ -131,7 +136,9 @@ export async function handleEmailAnalyzeContent(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -172,9 +179,11 @@ export async function handleEmailCalculateRisk(args) {
                         risk: riskAnalysis,
                         interpretation: {
                             level: riskAnalysis.level,
-                            description: riskAnalysis.score >= 75 ? "안전함 - 위험 요소 없거나 미미함" :
-                                riskAnalysis.score >= 45 ? "의심스러움 - 일부 위험 요소 있음" :
-                                    "매우 위험 - 심각한 피싱/스미싱 가능성",
+                            description: riskAnalysis.score >= 75
+                                ? "안전함 - 위험 요소 없거나 미미함"
+                                : riskAnalysis.score >= 45
+                                    ? "의심스러움 - 일부 위험 요소 있음"
+                                    : "매우 위험 - 심각한 피싱/스미싱 가능성",
                             recommendations: generateRecommendations(riskAnalysis),
                         },
                         timestamp: new Date().toISOString(),
@@ -191,7 +200,9 @@ export async function handleEmailCalculateRisk(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -250,7 +261,9 @@ export async function handleEmailAnalyzeIntent(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -284,7 +297,10 @@ export async function handleComprehensiveEmailAnalysis(args) {
         const headerAnalysis = analyzeEmailHeader(rawEmailData);
         console.log("이메일 헤더 분석 완료");
         // 2. 이메일 본문 및 링크 분석
-        let bodyAnalysis = { body: "", links: [] };
+        let bodyAnalysis = {
+            body: "",
+            links: [],
+        };
         try {
             bodyAnalysis = parseEmailBodyAndLinks(rawEmailData);
             console.log("이메일 본문 및 링크 분석 완료");
@@ -374,7 +390,9 @@ export async function handleComprehensiveEmailAnalysis(args) {
                     type: "text",
                     text: JSON.stringify({
                         success: false,
-                        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+                        error: error instanceof Error
+                            ? error.message
+                            : "알 수 없는 오류가 발생했습니다",
                         timestamp: new Date().toISOString(),
                     }, null, 2),
                 },
@@ -432,9 +450,17 @@ function generateDetailedRecommendations(analysisResult) {
     return recommendations;
 }
 function getThreatLevel(category, confidence) {
-    const highRiskCategories = ["비밀번호 변경 요청", "송장/청구서 위장", "로그인 시도 알림"];
+    const highRiskCategories = [
+        "비밀번호 변경 요청",
+        "송장/청구서 위장",
+        "로그인 시도 알림",
+    ];
     if (highRiskCategories.includes(category)) {
-        return confidence === "High" ? "매우 높음" : confidence === "Medium" ? "높음" : "중간";
+        return confidence === "High"
+            ? "매우 높음"
+            : confidence === "Medium"
+                ? "높음"
+                : "중간";
     }
     else if (category === "스팸 광고") {
         return confidence === "High" ? "중간" : "낮음";
