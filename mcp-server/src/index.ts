@@ -301,9 +301,9 @@ class SpamAnalyzerMCPServer {
       // OpenAPI 스키마 엔드포인트 (ChatGPT Actions 연동용)
       this.httpServer.get("/openapi.json", (req, res) => {
         // CORS 헤더 추가
-        res.header('Access-Control-Allow-Origin', '*');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Content-Type');
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.header("Access-Control-Allow-Headers", "Content-Type");
         const openApiSchema = {
           openapi: "3.0.0",
           info: {
@@ -361,6 +361,16 @@ class SpamAnalyzerMCPServer {
           },
         };
         res.json(openApiSchema);
+      });
+
+      // 테스트 엔드포인트 (ChatGPT Actions 연결 테스트용)
+      this.httpServer.get("/test", (req, res) => {
+        res.json({
+          success: true,
+          message: "ChatGPT Actions 연결 성공",
+          server: "spam-analyzer-mcp-server",
+          timestamp: new Date().toISOString(),
+        });
       });
 
       // REST API 엔드포인트들 (ChatGPT Actions용)
