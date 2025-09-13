@@ -280,15 +280,15 @@ class SpamAnalyzerMCPServer {
           protocol: "Model Context Protocol",
           endpoints: {
             jsonrpc: "POST /jsonrpc",
-            health: "GET /health", 
+            health: "GET /health",
             tools: "GET /tools",
-            docs: "GET /docs"
+            docs: "GET /docs",
           },
           usage: {
             chatgpt: "https://darkwinterlab.com/mcp/jsonrpc",
             cursor: "로컬 STDIO 모드 사용",
-            claude: "로컬 STDIO 모드 사용"
-          }
+            claude: "로컬 STDIO 모드 사용",
+          },
         });
       });
 
