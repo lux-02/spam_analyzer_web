@@ -249,24 +249,26 @@ class SpamAnalyzerMCPServer {
             });
             // OpenAPI 스키마 엔드포인트 (ChatGPT Actions 연동용)
             this.httpServer.get("/openapi.json", (req, res) => {
+                // CORS 헤더 추가
+                res.header('Access-Control-Allow-Origin', '*');
+                res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+                res.header('Access-Control-Allow-Headers', 'Content-Type');
                 const openApiSchema = {
-                    openapi: "3.1.0",
+                    openapi: "3.0.0",
                     info: {
-                        title: "DarkWinter Email Spam Analyzer",
-                        description: "이메일 스팸/피싱 분석을 위한 API",
+                        title: "Email Spam Analyzer",
+                        description: "이메일 분석 API",
                         version: "1.0.0",
                     },
                     servers: [
                         {
                             url: "https://darkwinterlab.com/mcp",
-                            description: "Production server",
                         },
                     ],
                     paths: {
                         "/analyze/email": {
                             post: {
-                                summary: "이메일 종합 분석",
-                                description: "이메일의 헤더, 본문, 첨부파일을 종합적으로 분석하여 스팸/피싱 여부를 판단합니다.",
+                                summary: "이메일 분석",
                                 operationId: "analyzeEmail",
                                 requestBody: {
                                     required: true,
@@ -277,7 +279,7 @@ class SpamAnalyzerMCPServer {
                                                 properties: {
                                                     rawEmailData: {
                                                         type: "string",
-                                                        description: "분석할 이메일의 원문 데이터 (헤더 포함)",
+                                                        description: "이메일 원문",
                                                     },
                                                 },
                                                 required: ["rawEmailData"],
@@ -287,75 +289,16 @@ class SpamAnalyzerMCPServer {
                                 },
                                 responses: {
                                     "200": {
-                                        description: "분석 성공",
+                                        description: "Success",
                                         content: {
                                             "application/json": {
                                                 schema: {
                                                     type: "object",
                                                     properties: {
                                                         success: { type: "boolean" },
-                                                        riskScore: {
-                                                            type: "integer",
-                                                            description: "위험도 점수 (0-100)",
-                                                            minimum: 0,
-                                                            maximum: 100
-                                                        },
-                                                        riskLevel: {
-                                                            type: "string",
-                                                            enum: ["safe", "suspicious", "danger"],
-                                                            description: "위험도 레벨"
-                                                        },
-                                                        analysis: {
-                                                            type: "object",
-                                                            description: "상세 분석 결과"
-                                                        },
-                                                        recommendations: {
-                                                            type: "array",
-                                                            items: { type: "string" },
-                                                            description: "권장 조치사항"
-                                                        }
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        "/analyze/ip": {
-                            post: {
-                                summary: "IP 주소 분석",
-                                description: "IP 주소의 지리적 위치와 위험도를 분석합니다.",
-                                operationId: "analyzeIP",
-                                requestBody: {
-                                    required: true,
-                                    content: {
-                                        "application/json": {
-                                            schema: {
-                                                type: "object",
-                                                properties: {
-                                                    ipAddress: {
-                                                        type: "string",
-                                                        pattern: "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$",
-                                                        description: "분석할 IP 주소",
-                                                    },
-                                                },
-                                                required: ["ipAddress"],
-                                            },
-                                        },
-                                    },
-                                },
-                                responses: {
-                                    "200": {
-                                        description: "분석 성공",
-                                        content: {
-                                            "application/json": {
-                                                schema: {
-                                                    type: "object",
-                                                    properties: {
-                                                        success: { type: "boolean" },
-                                                        ipInfo: { type: "object" },
+                                                        riskScore: { type: "integer" },
                                                         riskLevel: { type: "string" },
+                                                        analysis: { type: "object" },
                                                     },
                                                 },
                                             },
@@ -381,7 +324,7 @@ class SpamAnalyzerMCPServer {
                     // MCP 도구 호출
                     const result = await allToolHandlers["mcp_comprehensive_email_analysis"]({ rawEmailData });
                     // 결과를 ChatGPT가 이해하기 쉬운 형태로 변환
-                    const analysisResult = typeof result === 'string' ? JSON.parse(result) : result;
+                    const analysisResult = typeof result === "string" ? JSON.parse(result) : result;
                     res.json({
                         success: true,
                         riskScore: analysisResult.riskScore || 0,
@@ -391,7 +334,7 @@ class SpamAnalyzerMCPServer {
                     });
                 }
                 catch (error) {
-                    console.error('Email analysis error:', error);
+                    console.error("Email analysis error:", error);
                     res.status(500).json({
                         success: false,
                         error: error instanceof Error ? error.message : "Analysis failed",
@@ -416,7 +359,7 @@ class SpamAnalyzerMCPServer {
                     });
                 }
                 catch (error) {
-                    console.error('IP analysis error:', error);
+                    console.error("IP analysis error:", error);
                     res.status(500).json({
                         success: false,
                         error: error instanceof Error ? error.message : "Analysis failed",
