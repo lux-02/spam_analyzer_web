@@ -36,6 +36,9 @@ COPY --from=frontend-build /app/public ./public
 COPY --from=frontend-build /app/package*.json ./
 COPY --from=frontend-build /app/node_modules ./node_modules
 
+# MCP 서버 파일 복사
+COPY mcp-server /app/mcp-server
+
 # Flask 서버 파일 복사
 COPY flask-server /app/flask-server
 COPY run-servers.sh /app/run-servers.sh
@@ -50,7 +53,7 @@ RUN cd flask-server && \
     pip install --no-cache-dir vt-graph-api python-dotenv
     
 # 포트 노출
-EXPOSE 3000 5001
+EXPOSE 3000 5001 3001
 
 # 환경 변수 설정
 ENV FLASK_API_URL=http://0.0.0.0:5001/analyze
@@ -58,6 +61,9 @@ ENV FLASK_PORT=5001
 ENV NODE_ENV=production
 ENV MONGODB_URI=mongodb://mongo:27017/spam_analyzer
 ENV FLASK_SERVER_URL=http://0.0.0.0:5001
+ENV HTTP_MODE=true
+ENV MCP_SERVER_PORT=3001
+ENV MCP_SERVER_HOST=0.0.0.0
 
 # 서버 실행
 CMD ["./run-servers.sh"] 
