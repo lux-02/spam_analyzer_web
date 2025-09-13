@@ -305,13 +305,13 @@ class SpamAnalyzerMCPServer {
           info: {
             title: "DarkWinter Email Spam Analyzer",
             description: "이메일 스팸/피싱 분석을 위한 MCP 서버",
-            version: "1.0.0"
+            version: "1.0.0",
           },
           servers: [
             {
               url: "https://darkwinterlab.com/mcp",
-              description: "Production server"
-            }
+              description: "Production server",
+            },
           ],
           paths: {
             "/jsonrpc": {
@@ -335,28 +335,28 @@ class SpamAnalyzerMCPServer {
                                 type: "string",
                                 enum: [
                                   "mcp_comprehensive_email_analysis",
-                                  "mcp_email_analyze_headers", 
+                                  "mcp_email_analyze_headers",
                                   "mcp_email_analyze_content",
                                   "mcp_email_analyze_intent",
                                   "mcp_analyze_ip",
                                   "mcp_virustotal_check",
-                                  "mcp_analyze_domain"
+                                  "mcp_analyze_domain",
                                 ],
-                                description: "사용할 MCP 도구명"
+                                description: "사용할 MCP 도구명",
                               },
                               arguments: {
                                 type: "object",
-                                description: "도구에 전달할 인수"
-                              }
+                                description: "도구에 전달할 인수",
+                              },
                             },
-                            required: ["name", "arguments"]
+                            required: ["name", "arguments"],
                           },
-                          id: { type: "integer", const: 1 }
+                          id: { type: "integer", const: 1 },
                         },
-                        required: ["jsonrpc", "method", "params", "id"]
-                      }
-                    }
-                  }
+                        required: ["jsonrpc", "method", "params", "id"],
+                      },
+                    },
+                  },
                 },
                 responses: {
                   "200": {
@@ -368,16 +368,16 @@ class SpamAnalyzerMCPServer {
                           properties: {
                             jsonrpc: { type: "string" },
                             result: { type: "object" },
-                            id: { type: "integer" }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
+                            id: { type: "integer" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         };
         res.json(openApiSchema);
       });
