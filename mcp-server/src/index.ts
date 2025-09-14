@@ -285,9 +285,10 @@ class SpamAnalyzerMCPServer {
             docs: "GET /docs",
           },
           usage: {
+            claude_remote_mcp: "https://darkwinterlab.com/mcp/jsonrpc",
+            cursor_remote_mcp: "https://darkwinterlab.com/mcp/jsonrpc",
             chatgpt: "https://darkwinterlab.com/mcp/jsonrpc",
-            cursor: "로컬 STDIO 모드 사용",
-            claude: "로컬 STDIO 모드 사용",
+            local_stdio: "로컬 STDIO 모드 사용",
           },
         });
       });
@@ -438,11 +439,20 @@ class SpamAnalyzerMCPServer {
         }
       });
 
-      // JSON-RPC 어댑터 (ChatGPT 연동용)
+      // JSON-RPC 2.0 엔드포인트 (MCP Remote 표준)
       this.httpServer.post("/jsonrpc", async (req, res) => {
+        // CORS 헤더 설정
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+        res.header(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization"
+        );
+
         try {
           const { jsonrpc, method, params, id } = req.body;
 
+          // JSON-RPC 2.0 검증
           if (jsonrpc !== "2.0") {
             return res.status(400).json({
               jsonrpc: "2.0",
@@ -461,6 +471,7 @@ class SpamAnalyzerMCPServer {
                   tools: { listChanged: false },
                   resources: { subscribe: false, listChanged: false },
                   prompts: { listChanged: false },
+                  logging: {},
                 },
                 serverInfo: {
                   name: "spam-analyzer-mcp-server",
@@ -483,31 +494,62 @@ class SpamAnalyzerMCPServer {
               const { name: toolName, arguments: toolArgs } = params;
 
               if (!allToolHandlers[toolName as keyof typeof allToolHandlers]) {
-                throw new Error(`Unknown tool: ${toolName}`);
+                return res.json({
+                  jsonrpc: "2.0",
+                  error: {
+                    code: -32602,
+                    message: `Unknown tool: ${toolName}`,
+                    data: { availableTools: Object.keys(allToolHandlers) },
+                  },
+                  id: id || null,
+                });
               }
 
               const toolResult = await allToolHandlers[
                 toolName as keyof typeof allToolHandlers
               ](toolArgs);
-              result = {
-                content: [
-                  {
-                    type: "text",
-                    text:
-                      typeof toolResult === "string"
-                        ? toolResult
-                        : JSON.stringify(toolResult, null, 2),
-                  },
-                ],
-              };
+
+              // MCP 표준 응답 형식으로 변환
+              if (
+                toolResult &&
+                typeof toolResult === "object" &&
+                "content" in toolResult
+              ) {
+                result = toolResult;
+              } else {
+                result = {
+                  content: [
+                    {
+                      type: "text",
+                      text:
+                        typeof toolResult === "string"
+                          ? toolResult
+                          : JSON.stringify(toolResult, null, 2),
+                    },
+                  ],
+                  isError: false,
+                };
+              }
+              break;
+
+            case "ping":
+              result = {};
               break;
 
             default:
-              return res.status(400).json({
+              return res.json({
                 jsonrpc: "2.0",
                 error: {
                   code: -32601,
-                  message: `Method not found: ${method}. Supported: initialize, tools/list, tools/call`,
+                  message: `Method not found: ${method}`,
+                  data: {
+                    supportedMethods: [
+                      "initialize",
+                      "tools/list",
+                      "tools/call",
+                      "ping",
+                    ],
+                  },
                 },
                 id: id || null,
               });
@@ -530,6 +572,17 @@ class SpamAnalyzerMCPServer {
             id: req.body?.id || null,
           });
         }
+      });
+
+      // CORS preflight 지원
+      this.httpServer.options("/jsonrpc", (req, res) => {
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+        res.header(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization"
+        );
+        res.sendStatus(200);
       });
 
       // 404 핸들러
@@ -574,7 +627,7 @@ class SpamAnalyzerMCPServer {
 
     if (mode === "HTTP" && this.httpServer) {
       const port = parseInt(process.env.MCP_SERVER_PORT || "3001");
-      const host = process.env.MCP_SERVER_HOST || "localhost";
+      const host = process.env.MCP_SERVER_HOST || "0.0.0.0"; // 외부 접근 허용
 
       this.httpServer.listen(port, host, () => {
         console.log(

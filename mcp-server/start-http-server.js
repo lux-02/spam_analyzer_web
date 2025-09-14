@@ -14,7 +14,7 @@ const __dirname = dirname(__filename);
 // 환경 변수 설정
 process.env.HTTP_MODE = "true";
 process.env.MCP_SERVER_PORT = process.env.MCP_SERVER_PORT || "3001";
-process.env.MCP_SERVER_HOST = process.env.MCP_SERVER_HOST || "localhost";
+process.env.MCP_SERVER_HOST = process.env.MCP_SERVER_HOST || "0.0.0.0";
 
 console.log("🚀 HTTP 모드로 MCP 서버를 시작합니다...");
 console.log(`포트: ${process.env.MCP_SERVER_PORT}`);

@@ -160,14 +160,36 @@ curl http://localhost:3001/docs
 
 ## MCP 클라이언트 설정
 
-### Claude Desktop 설정
+### Remote MCP 연결 (클로드, Cursor 등)
 
-Claude Desktop에서 사용하려면 `claude_desktop_config.json`에 다음을 추가하세요:
+**프로덕션 환경 (추천):**
 
 ```json
 {
   "mcpServers": {
-    "spam-analyzer": {
+    "spam-analyzer-remote": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://darkwinterlab.com/mcp/jsonrpc"]
+    }
+  }
+}
+```
+
+**클로드 웹/앱에서:**
+
+1. Settings > Connectors 이동
+2. "Add custom connector" 클릭
+3. URL 입력: `https://darkwinterlab.com/mcp/jsonrpc`
+4. "Add" 클릭
+
+### 로컬 STDIO 모드 설정
+
+**Claude Desktop 로컬 설정:**
+
+```json
+{
+  "mcpServers": {
+    "spam-analyzer-local": {
       "command": "node",
       "args": ["/path/to/spam_analyzer_web/mcp-server/dist/index.js"],
       "env": {
@@ -181,9 +203,20 @@ Claude Desktop에서 사용하려면 `claude_desktop_config.json`에 다음을 �
 }
 ```
 
-### 기타 MCP 클라이언트
+### Cursor 설정
 
-다른 MCP 클라이언트에서는 STDIO 모드로 서버를 실행하고 프로세스와 통신하세요.
+Cursor의 `.cursor/mcp.json`에 추가:
+
+```json
+{
+  "mcpServers": {
+    "spam-analyzer": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://darkwinterlab.com/mcp/jsonrpc"]
+    }
+  }
+}
+```
 
 ## 개발
 
