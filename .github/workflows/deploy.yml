@@ -1,177 +1,260 @@
-name: Deploy to GCP
+name: Auto Deploy to GCP
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_ZONE: us-central1-c
+  GCP_INSTANCE: instance-20250812-075321
 
 jobs:
   deploy:
+    name: Deploy to GCP Instance
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build application
-        run: npm run build
-
-      - name: Debug Secrets
-        run: |
-          echo "Checking if GCP_SA_KEY is set..."
-          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
-            echo "❌ GCP_SA_KEY is not set or empty"
-            exit 1
-          else
-            echo "✅ GCP_SA_KEY is set (length: $(echo '${{ secrets.GCP_SA_KEY }}' | wc -c))"
-          fi
-
-          echo "Checking if GCP_PROJECT_ID is set..."
-          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
-            echo "❌ GCP_PROJECT_ID is not set or empty"
-            exit 1
-          else
-            echo "✅ GCP_PROJECT_ID is set: ${{ secrets.GCP_PROJECT_ID }}"
-          fi
-
       - name: Authenticate to Google Cloud
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
-        run: |
-          # 서비스 계정 키를 파일로 저장
-          echo "$GOOGLE_CREDENTIALS" > /tmp/gcp-sa-key.json
-          chmod 600 /tmp/gcp-sa-key.json
-
-          # gcloud 인증
-          gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-
-      - name: Setup Google Cloud CLI
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/auth@v2
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Configure gcloud
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # SSH 키 전파 문제를 해결하는 개선된 방법
+      - name: Setup SSH with retry mechanism
         run: |
-          # gcloud 설정 확인
-          gcloud config list
-          echo "✅ gcloud configured successfully"
+          # SSH 키 설정
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
+          chmod 600 ~/.ssh/google_compute_engine
 
-      - name: Create deployment package
+          # 공개 키 생성 (개인 키로부터)
+          ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
+
+          # GCP 메타데이터에 SSH 키 추가 (덮어쓰기 방지)
+          gcloud compute project-info describe --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt
+
+          # 현재 키가 없으면 추가
+          if ! grep -q "runner:" current_keys.txt 2>/dev/null; then
+            echo "runner:$(cat ~/.ssh/google_compute_engine.pub)" >> current_keys.txt
+            gcloud compute project-info add-metadata --metadata-from-file ssh-keys=current_keys.txt
+          fi
+
+          # SSH 설정
+          cat > ~/.ssh/config << EOF
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            ServerAliveInterval 60
+            ServerAliveCountMax 10
+            ConnectTimeout 30
+          EOF
+          chmod 600 ~/.ssh/config
+
+      # 대안 1: Git pull을 통한 코드 동기화 (가장 안전)
+      - name: Deploy via Git pull (Method 1)
+        id: git_deploy
+        continue-on-error: true
         run: |
-          # 배포에 필요한 파일들만 패키징 (파일 변경 오류 방지)
-          mkdir -p /tmp/deployment
+          echo "🔄 Git을 통한 배포 시작..."
 
-          # 필요한 파일들을 임시 디렉토리에 복사
-          rsync -av \
-            --exclude='.git' \
-            --exclude='node_modules' \
-            --exclude='.next' \
-            --exclude='*.tgz' \
-            --exclude='.github' \
-            --exclude='README.md' \
-            --exclude='DEPLOY.md' \
-            --exclude='GITHUB_PUSH_GUIDE.md' \
-            --exclude='PORTFOLIO_SETUP.md' \
-            --exclude='certificates' \
-            --exclude='rex.pem' \
-            . /tmp/deployment/
+          # SSH 키 전파 대기
+          echo "SSH 키 전파를 위해 60초 대기..."
+          sleep 60
+
+          # 최대 3번 시도
+          for attempt in 1 2 3; do
+            echo "🔗 SSH 연결 시도 $attempt/3..."
             
-          # 임시 디렉토리에서 압축
-          cd /tmp/deployment
-          tar -czf $GITHUB_WORKSPACE/deployment.tar.gz .
+            if gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+              --zone=${{ env.GCP_ZONE }} \
+              --command="
+                echo '✅ SSH 연결 성공!'
+                cd ~/spam_analyzer_web || exit 1
+                
+                echo '📦 Git 저장소 업데이트...'
+                git fetch origin
+                git reset --hard origin/main
+                
+                echo '🔨 MCP 서버 빌드...'
+                cd mcp-server
+                npm install --production
+                npm run build
+                
+                echo '🚀 배포 스크립트 실행...'
+                cd ..
+                chmod +x deploy-with-mcp.sh
+                ./deploy-with-mcp.sh
+                
+                echo '✅ 배포 완료!'
+              " \
+              --ssh-key-file=~/.ssh/google_compute_engine \
+              --quiet; then
+              echo "✅ Git 배포 성공!"
+              exit 0
+            else
+              echo "❌ SSH 연결 실패 (시도 $attempt/3)"
+              if [ $attempt -lt 3 ]; then
+                echo "30초 후 재시도..."
+                sleep 30
+              fi
+            fi
+          done
 
-          # 압축 파일 크기 확인
-          ls -lh $GITHUB_WORKSPACE/deployment.tar.gz
+          echo "❌ Git 배포 실패 - 대안 방법으로 진행"
+          exit 1
 
-      - name: Deploy to GCP Instance
+      # 대안 2: Cloud Storage를 통한 배포 (Git 방법 실패 시)
+      - name: Deploy via Cloud Storage (Method 2)
+        if: steps.git_deploy.outcome == 'failure'
         run: |
-          # OS Login 사용하여 배포 파일 업로드
-          gcloud compute scp deployment.tar.gz instance-20250812-075321:~/deployment.tar.gz \
-            --zone=us-central1-c \
-            --quiet
-            
-          # 배포 실행
-          gcloud compute ssh instance-20250812-075321 \
-            --zone=us-central1-c \
+          echo "📦 Cloud Storage를 통한 배포 시작..."
+
+          # 임시 버킷 생성
+          BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-temp-deploy"
+          gsutil mb gs://$BUCKET_NAME 2>/dev/null || echo "버킷이 이미 존재합니다."
+
+          # 소스 코드 압축
+          echo "🗜️ 소스 코드 압축 중..."
+          tar --exclude='.git' \
+              --exclude='node_modules' \
+              --exclude='mcp-server/node_modules' \
+              --exclude='mcp-server/dist' \
+              --exclude='flask-server/venv' \
+              -czf source-code.tar.gz .
+
+          # Cloud Storage에 업로드
+          echo "☁️ Cloud Storage에 업로드 중..."
+          gsutil cp source-code.tar.gz gs://$BUCKET_NAME/
+
+          # 배포 스크립트 생성
+          cat > deploy_script.sh << 'EOF'
+          #!/bin/bash
+          set -e
+
+          echo "📥 Cloud Storage에서 코드 다운로드..."
+          gsutil cp gs://{{ BUCKET_NAME }}/source-code.tar.gz ~/
+
+          echo "📁 기존 코드 백업..."
+          if [ -d ~/spam_analyzer_web ]; then
+            mv ~/spam_analyzer_web ~/spam_analyzer_web_backup_$(date +%Y%m%d_%H%M%S)
+          fi
+
+          echo "📦 새 코드 추출..."
+          mkdir -p ~/spam_analyzer_web
+          tar -xzf ~/source-code.tar.gz -C ~/spam_analyzer_web
+
+          echo "🔨 빌드 및 배포..."
+          cd ~/spam_analyzer_web
+          chmod +x deploy-with-mcp.sh
+          ./deploy-with-mcp.sh
+
+          echo "🧹 정리..."
+          rm ~/source-code.tar.gz
+
+          echo "✅ 배포 완료!"
+          EOF
+
+          # 스크립트 치환
+          sed "s/{{ BUCKET_NAME }}/$BUCKET_NAME/g" deploy_script.sh > final_deploy_script.sh
+
+          # 배포 스크립트 업로드
+          gsutil cp final_deploy_script.sh gs://$BUCKET_NAME/
+
+          # 원격에서 배포 실행
+          echo "🚀 원격 배포 실행..."
+          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
             --command="
-              cd ~/apps/spam_analyzer_web &&
-              # 백업 생성
-              TIMESTAMP=\$(date +%Y%m%d-%H%M%S) &&
-              mkdir -p ~/backups &&
-              cp -r . ~/backups/spam_analyzer_web-\$TIMESTAMP 2>/dev/null || true &&
-              echo '✅ Backup created: ~/backups/spam_analyzer_web-'\$TIMESTAMP &&
-              # 환경 변수 백업
-              if [ -f '.env.local' ]; then cp .env.local /tmp/.env.local.backup; fi &&
-              # 새 코드 추출
-              tar -xzf ~/deployment.tar.gz &&
-              # 환경 변수 복원
-              if [ -f '/tmp/.env.local.backup' ]; then cp /tmp/.env.local.backup .env.local && rm /tmp/.env.local.backup; fi &&
-              # macOS 메타데이터 파일 정리
-              find . -name '._*' -delete 2>/dev/null || true &&
-              # 의존성 설치
-              npm ci --production --silent &&
-              # 빌드
-              npm run build &&
-              # 서버 재시작
-              pkill -f 'next-server' || echo 'No server was running' &&
-              sleep 3 &&
-              nohup npm start > next.log 2>&1 &
-              sleep 2 &&
-              # 헬스 체크
-              sleep 5 &&
-              if pgrep -f 'next-server' > /dev/null; then
-                echo '✅ Server started successfully' &&
-                for i in {1..5}; do
-                  if curl -s -f http://localhost:3000 > /dev/null; then
-                    echo '✅ Application is responding' && break
-                  else
-                    echo '⏳ Health check attempt '\$i'/5...' && sleep 2
-                  fi
-                done
-              else
-                echo '❌ Server failed to start' &&
-                tail -10 next.log 2>/dev/null || echo 'No log file found' &&
-                exit 1
-              fi &&
-              # 정리
-              rm -f ~/deployment.tar.gz &&
-              echo '🎉 Deployment completed successfully!'
+              gsutil cp gs://$BUCKET_NAME/final_deploy_script.sh ~/
+              chmod +x ~/final_deploy_script.sh
+              ~/final_deploy_script.sh
             " \
-            --quiet
+            --ssh-key-file=~/.ssh/google_compute_engine
 
+          # 임시 파일 정리
+          gsutil rm gs://$BUCKET_NAME/source-code.tar.gz gs://$BUCKET_NAME/final_deploy_script.sh
+
+      # 배포 검증
       - name: Verify deployment
         run: |
-          sleep 10
-          # 서버 상태 확인
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://darkwinterlab.com)
-          if [ "$response" = "200" ]; then
-            echo "✅ Deployment successful - Server is responding"
-          else
-            echo "❌ Deployment may have failed - Server responded with $response"
-            exit 1
-          fi
+          echo "🧪 배포 검증 중..."
+          sleep 30  # 서비스 시작 대기
 
-      - name: Clean up
+          # 외부 IP 가져오기
+          EXTERNAL_IP=$(gcloud compute instances describe ${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+          echo "🌐 External IP: $EXTERNAL_IP"
+
+          # 서비스 헬스 체크
+          SERVICES=("3000" "5001" "3001")
+          SERVICE_NAMES=("Next.js" "Flask API" "MCP Server")
+
+          for i in {0..2}; do
+            PORT=${SERVICES[$i]}
+            NAME=${SERVICE_NAMES[$i]}
+            
+            echo "🔍 $NAME (포트 $PORT) 확인 중..."
+            
+            for attempt in 1 2 3; do
+              if curl -f --connect-timeout 10 "http://$EXTERNAL_IP:$PORT" > /dev/null 2>&1 || \
+                 curl -f --connect-timeout 10 "http://$EXTERNAL_IP:$PORT/health" > /dev/null 2>&1; then
+                echo "✅ $NAME: 정상"
+                break
+              else
+                echo "❌ $NAME: 실패 (시도 $attempt/3)"
+                if [ $attempt -eq 3 ]; then
+                  echo "🚨 $NAME 서비스 검증 실패!"
+                else
+                  sleep 10
+                fi
+              fi
+            done
+          done
+
+          echo "🎉 배포 검증 완료!"
+          echo "📍 서비스 URL:"
+          echo "- 메인 사이트: https://darkwinterlab.com"
+          echo "- MCP API: https://darkwinterlab.com/mcp/"
+
+      # 실패 시 알림
+      - name: Notify on failure
+        if: failure()
         run: |
-          rm -f /tmp/gcp-sa-key.json /tmp/deploy-script.sh
-          rm -rf /tmp/deployment
+          echo "🚨 배포 실패!"
+          echo "자세한 로그는 GitHub Actions에서 확인하세요."
 
-      - name: Notify deployment status
+          # 실패 시 서버 상태 확인
+          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --command="
+              echo '📊 서버 상태:'
+              ps aux | grep -E '(node|npm|pm2)' | head -10
+              echo '📁 디스크 사용량:'
+              df -h
+              echo '💾 메모리 사용량:'
+              free -h
+            " \
+            --ssh-key-file=~/.ssh/google_compute_engine || echo "서버 상태 확인 실패"
+
+      # 정리
+      - name: Cleanup
         if: always()
         run: |
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "🚀 Deployment to https://darkwinterlab.com completed successfully!"
-          else
-            echo "❌ Deployment failed. Check the logs above."
-          fi
+          # 로컬 임시 파일 정리
+          rm -f source-code.tar.gz deploy_script.sh final_deploy_script.sh current_keys.txt
+
+          # SSH 키 정리
+          rm -f ~/.ssh/google_compute_engine ~/.ssh/google_compute_engine.pub
+
+          echo "🧹 정리 완료"

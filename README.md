@@ -2,6 +2,9 @@
 
 이메일 원문을 분석하여 스팸/피싱 여부를 분석하는 웹 애플리케이션입니다.
 
+**🌐 라이브 데모**: [https://darkwinterlab.com](https://darkwinterlab.com)  
+**🤖 MCP API**: [https://darkwinterlab.com/mcp/](https://darkwinterlab.com/mcp/)
+
 ## 기능
 
 - 이메일 헤더 분석 (SPF, DKIM, DMARC 등)
@@ -132,6 +135,42 @@ http://localhost:3000
 - Next.js 및 TailwindCSS 기반 UI
 - 이메일 원문 파싱 및 분석
 - 결과 저장 및 조회 기능
+
+## 🚀 자동 배포
+
+이 프로젝트는 GitHub Actions를 통해 GCP에 자동 배포됩니다.
+
+### 배포 트리거
+- `main` 브랜치에 push 시 자동 배포
+- 수동 배포: GitHub Actions 탭에서 "Run workflow" 클릭
+
+### 배포 구성
+- **메인 웹앱**: Next.js (포트 3000)
+- **Flask API**: Python Flask (포트 5001)  
+- **MCP 서버**: TypeScript (포트 3001)
+- **웹 서버**: Nginx (포트 80/443)
+
+### SSH 키 문제 해결
+배포 중 SSH 연결 오류가 발생하면:
+
+```bash
+# 로컬에서 SSH 키 수정 스크립트 실행
+export GCP_PROJECT_ID="confident-trail-468806-t9"
+export GCP_INSTANCE="instance-20250812-075321"
+export GCP_ZONE="us-central1-c"
+./scripts/fix-ssh-keys.sh
+```
+
+### 배포 상태 확인
+- **GitHub Actions**: 배포 진행 상황 확인
+- **라이브 사이트**: https://darkwinterlab.com
+- **MCP API**: https://darkwinterlab.com/mcp/health
+
+### 클로드 MCP 연결
+클로드에서 다음 URL로 Custom Connector 추가:
+```
+https://darkwinterlab.com/mcp/jsonrpc
+```
 
 ## 라이선스
 

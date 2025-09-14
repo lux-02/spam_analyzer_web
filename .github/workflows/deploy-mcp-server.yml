@@ -1,0 +1,240 @@
+name: Deploy MCP Server to GCP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp-server/**"
+      - ".github/workflows/deploy-mcp-server.yml"
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_ZONE: us-central1-c
+  GCP_INSTANCE: instance-20250812-075321
+
+jobs:
+  deploy:
+    name: Deploy MCP Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: "./mcp-server/package-lock.json"
+
+      - name: Install dependencies
+        working-directory: ./mcp-server
+        run: npm ci
+
+      - name: Build TypeScript
+        working-directory: ./mcp-server
+        run: npm run build
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure SSH
+        run: |
+          # SSH 키 설정
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
+          chmod 600 ~/.ssh/google_compute_engine
+
+          # SSH 설정 파일 생성
+          cat > ~/.ssh/config << EOF
+          Host gcp-instance
+            HostName ${{ env.GCP_INSTANCE }}
+            User runner
+            IdentityFile ~/.ssh/google_compute_engine
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            ServerAliveInterval 60
+            ServerAliveCountMax 10
+          EOF
+          chmod 600 ~/.ssh/config
+
+      # 대안 방법 1: rsync 사용 (SSH 키 전파 문제 회피)
+      - name: Sync files via rsync (Method 1)
+        id: rsync_deploy
+        continue-on-error: true
+        run: |
+          # SSH 키 전파 대기
+          echo "SSH 키 전파를 위해 30초 대기..."
+          sleep 30
+
+          # rsync로 파일 동기화
+          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --command="mkdir -p ~/spam_analyzer_web/mcp-server" \
+            --ssh-key-file=~/.ssh/google_compute_engine \
+            --quiet || echo "Directory creation failed, continuing..."
+
+          # 파일 압축
+          tar -czf mcp-server-build.tar.gz -C ./mcp-server .
+
+          # 압축 파일 업로드
+          gcloud compute scp mcp-server-build.tar.gz runner@${{ env.GCP_INSTANCE }}:~/ \
+            --zone=${{ env.GCP_ZONE }} \
+            --ssh-key-file=~/.ssh/google_compute_engine
+
+      # 대안 방법 2: Cloud Storage 사용 (rsync 실패 시)
+      - name: Deploy via Cloud Storage (Method 2)
+        if: steps.rsync_deploy.outcome == 'failure'
+        run: |
+          # Cloud Storage 버킷 생성 (이미 있으면 무시)
+          gsutil mb gs://${{ env.GCP_PROJECT_ID }}-deployment-temp 2>/dev/null || true
+
+          # 파일 압축 및 업로드
+          tar -czf mcp-server-build.tar.gz -C ./mcp-server .
+          gsutil cp mcp-server-build.tar.gz gs://${{ env.GCP_PROJECT_ID }}-deployment-temp/
+
+          # 인스턴스에서 다운로드 및 배포
+          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --command="
+              # Cloud Storage에서 파일 다운로드
+              gsutil cp gs://${{ env.GCP_PROJECT_ID }}-deployment-temp/mcp-server-build.tar.gz ~/
+              
+              # 기존 파일 백업
+              if [ -d ~/spam_analyzer_web/mcp-server ]; then
+                mv ~/spam_analyzer_web/mcp-server ~/mcp-server-backup-\$(date +%Y%m%d-%H%M%S)
+              fi
+              
+              # 새 파일 추출
+              mkdir -p ~/spam_analyzer_web/mcp-server
+              tar -xzf ~/mcp-server-build.tar.gz -C ~/spam_analyzer_web/mcp-server
+              
+              # 정리
+              rm ~/mcp-server-build.tar.gz
+            " \
+            --ssh-key-file=~/.ssh/google_compute_engine
+
+          # 임시 파일 정리
+          gsutil rm gs://${{ env.GCP_PROJECT_ID }}-deployment-temp/mcp-server-build.tar.gz
+
+      # 서버 재시작 및 설정
+      - name: Deploy and restart server
+        run: |
+          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --command="
+              cd ~/spam_analyzer_web/mcp-server
+              
+              # 환경 변수 설정
+              export HTTP_MODE=true
+              export MCP_SERVER_PORT=3001
+              export MCP_SERVER_HOST=0.0.0.0
+              
+              # PM2가 설치되어 있는지 확인하고 설치
+              if ! command -v pm2 &> /dev/null; then
+                npm install -g pm2
+              fi
+              
+              # 기존 프로세스 중지
+              pm2 stop mcp-server 2>/dev/null || true
+              pm2 delete mcp-server 2>/dev/null || true
+              
+              # 의존성 설치 (필요시)
+              npm install --production
+              
+              # 서버 시작
+              pm2 start start-http-server.js --name mcp-server
+              pm2 save
+              
+              # 서버 상태 확인
+              sleep 5
+              pm2 status
+              
+              # 헬스 체크
+              curl -f http://localhost:3001/health || exit 1
+              
+              echo 'MCP Server deployment completed successfully!'
+            " \
+            --ssh-key-file=~/.ssh/google_compute_engine
+
+      # 배포 성공 확인
+      - name: Verify deployment
+        run: |
+          echo "Waiting for service to be fully ready..."
+          sleep 10
+
+          # 외부에서 헬스 체크
+          EXTERNAL_IP=$(gcloud compute instances describe ${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+
+          echo "External IP: $EXTERNAL_IP"
+          echo "Testing health endpoint..."
+
+          # 헬스 체크 (최대 5번 시도)
+          for i in {1..5}; do
+            if curl -f "http://$EXTERNAL_IP:3001/health"; then
+              echo "✅ Health check passed!"
+              break
+            else
+              echo "❌ Health check failed (attempt $i/5)"
+              if [ $i -eq 5 ]; then
+                echo "🚨 Deployment verification failed!"
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+
+          echo "🎉 MCP Server is now accessible at https://darkwinterlab.com/mcp/"
+
+      # 실패 시 롤백
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "🔄 Starting rollback process..."
+          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --command="
+              # 가장 최근 백업 찾기
+              LATEST_BACKUP=\$(ls -1t ~/mcp-server-backup-* 2>/dev/null | head -n1)
+              
+              if [ -n \"\$LATEST_BACKUP\" ]; then
+                echo \"Rolling back to: \$LATEST_BACKUP\"
+                
+                # 현재 실패한 버전 제거
+                rm -rf ~/spam_analyzer_web/mcp-server
+                
+                # 백업에서 복원
+                cp -r \"\$LATEST_BACKUP\" ~/spam_analyzer_web/mcp-server
+                
+                # 서버 재시작
+                cd ~/spam_analyzer_web/mcp-server
+                pm2 restart mcp-server || pm2 start start-http-server.js --name mcp-server
+                
+                echo \"✅ Rollback completed\"
+              else
+                echo \"❌ No backup found for rollback\"
+              fi
+            " \
+            --ssh-key-file=~/.ssh/google_compute_engine || echo "Rollback failed"
+
+      # 정리
+      - name: Cleanup
+        if: always()
+        run: |
+          # 로컬 임시 파일 정리
+          rm -f mcp-server-build.tar.gz
+
+          # SSH 키 정리
+          rm -f ~/.ssh/google_compute_engine
+          rm -f ~/.ssh/config
+
+          echo "🧹 Cleanup completed"
