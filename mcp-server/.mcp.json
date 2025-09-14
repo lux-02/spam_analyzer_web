@@ -3,7 +3,7 @@
     "spam-analyzer": {
       "command": "node",
       "args": [
-        "/path/to/your/project/mcp-server/dist/index.js"
+        "dist/index.js"
       ],
       "env": {
         "MONGODB_URI": "${MONGODB_URI:-mongodb://localhost:27017/spam_analyzer}",

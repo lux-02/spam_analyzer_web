@@ -12,16 +12,30 @@
     "dev:http": "HTTP_MODE=true tsx src/index.ts",
     "watch": "tsx watch src/index.ts",
     "test": "node test-server.js",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "postinstall": "npm run build"
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "email-security",
     "spam-analysis",
-    "phishing-detection"
+    "phishing-detection",
+    "claude-connect"
   ],
   "author": "LUX",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/spam-analyzer-mcp-server"
+  },
+  "homepage": "https://github.com/your-username/spam-analyzer-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/your-username/spam-analyzer-mcp-server/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.0",
     "axios": "^1.6.8",
