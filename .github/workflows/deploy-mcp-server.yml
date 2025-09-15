@@ -25,7 +25,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: "npm"
           cache-dependency-path: "./mcp-server/package-lock.json"
 
@@ -45,55 +45,32 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Configure gcloud defaults
+        run: |
+          gcloud config set project "$GCP_PROJECT_ID"
+          gcloud config set compute/zone "$GCP_ZONE"
+
       - name: Setup SSH Authentication
         run: |
-          echo "🔑 SSH 인증 설정 시작..."
-
-          # SSH 디렉토리 생성
+          set -euxo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # SSH 키 설정
           echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
           chmod 600 ~/.ssh/google_compute_engine
-
-          # 공개 키 생성
           ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
-          echo "✅ SSH 키 페어 생성 완료"
 
-          # OS Login 강제 비활성화
-          echo "🔒 OS Login 비활성화..."
-          gcloud compute project-info add-metadata --metadata enable-oslogin=FALSE --quiet
+          EXISTING_INST_KEYS="$(gcloud compute instances describe "$GCP_INSTANCE" \
+            --format="value(metadata.items[key=ssh-keys].value)" || true)"
+          printf "%s\nrunner:%s\n" "${EXISTING_INST_KEYS}" "$(cat ~/.ssh/google_compute_engine.pub)" > inst_keys.txt
+          gcloud compute instances add-metadata "$GCP_INSTANCE" \
+            --metadata-from-file ssh-keys=inst_keys.txt
 
-          # SSH 설정 파일
-          cat > ~/.ssh/config << EOF
-          Host compute.googleapis.com
-            HostName compute.googleapis.com
-            IdentityFile ~/.ssh/google_compute_engine
-            UserKnownHostsFile /dev/null
-            CheckHostIP no
-            StrictHostKeyChecking no
-            ServerAliveInterval 30
-            ServerAliveCountMax 5
-            ConnectTimeout 60
-            IdentitiesOnly yes
-          EOF
-          chmod 600 ~/.ssh/config
+          gcloud compute instances add-metadata "$GCP_INSTANCE" \
+            --metadata block-project-ssh-keys=TRUE
 
-          # 프로젝트 SSH 키 업데이트
-          echo "📝 프로젝트 SSH 키 업데이트..."
-          gcloud compute project-info describe \
-            --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt 2>/dev/null || echo "" > current_keys.txt
-          grep -v "^runner:" current_keys.txt > filtered_keys.txt 2>/dev/null || touch filtered_keys.txt
-          echo "runner:$(cat ~/.ssh/google_compute_engine.pub)" >> filtered_keys.txt
-          grep -v "^$" filtered_keys.txt > final_keys.txt
-          gcloud compute project-info add-metadata --metadata-from-file ssh-keys=final_keys.txt --quiet
-
-          echo "⏳ SSH 키 전파 대기 (60초)..."
-          sleep 60
-
-          # 정리
-          rm -f current_keys.txt filtered_keys.txt final_keys.txt
+          sleep 30
+          rm -f inst_keys.txt
 
       # 대안 방법 1: rsync 사용 (SSH 키 전파 문제 회피)
       - name: Sync files via rsync (Method 1)
@@ -109,15 +86,15 @@ jobs:
             --zone=${{ env.GCP_ZONE }} \
             --command="mkdir -p ~/spam_analyzer_web/mcp-server" \
             --ssh-key-file=~/.ssh/google_compute_engine \
-            --quiet || echo "Directory creation failed, continuing..."
+            -- -vvv || echo "Directory creation failed, continuing..."
 
           # 파일 압축
           tar -czf mcp-server-build.tar.gz -C ./mcp-server .
 
           # 압축 파일 업로드
           gcloud compute scp mcp-server-build.tar.gz runner@${{ env.GCP_INSTANCE }}:~/ \
-            --zone=${{ env.GCP_ZONE }} \
-            --ssh-key-file=~/.ssh/google_compute_engine
+            --ssh-key-file=~/.ssh/google_compute_engine \
+            -- -vvv
 
       # 대안 방법 2: Cloud Storage 사용 (rsync 실패 시)
       - name: Deploy via Cloud Storage (Method 2)
@@ -167,7 +144,8 @@ jobs:
               # 정리
               rm ~/mcp-server-build.tar.gz
             " \
-            --ssh-key-file=~/.ssh/google_compute_engine
+            --ssh-key-file=~/.ssh/google_compute_engine \
+            -- -vvv
 
           # 임시 파일 정리
           gsutil rm gs://$BUCKET_NAME/mcp-server-build.tar.gz
@@ -210,7 +188,8 @@ jobs:
               
               echo 'MCP Server deployment completed successfully!'
             " \
-            --ssh-key-file=~/.ssh/google_compute_engine
+            --ssh-key-file=~/.ssh/google_compute_engine \
+            -- -vvv
 
       # 배포 성공 확인
       - name: Verify deployment
@@ -272,7 +251,8 @@ jobs:
                 echo \"❌ No backup found for rollback\"
               fi
             " \
-            --ssh-key-file=~/.ssh/google_compute_engine || echo "Rollback failed"
+            --ssh-key-file=~/.ssh/google_compute_engine \
+            -- -vvv || echo "Rollback failed"
 
       # 정리
       - name: Cleanup

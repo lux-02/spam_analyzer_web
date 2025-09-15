@@ -28,78 +28,44 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # 개선된 SSH 키 설정 - 더 안정적인 방법
+      - name: Configure gcloud defaults
+        run: |
+          gcloud config set project "$GCP_PROJECT_ID"
+          gcloud config set compute/zone "$GCP_ZONE"
+
+      # 개선된 SSH 키 설정 - 인스턴스 메타데이터 방식으로 안정화
       - name: Setup SSH Authentication
         run: |
-          echo "🔑 SSH 인증 설정 시작..."
-
-          # SSH 디렉토리 생성
+          set -euxo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # SSH 키 설정 (더 안전한 방법)
+          # 1) 키 파일 생성
           echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
           chmod 600 ~/.ssh/google_compute_engine
-
-          # 공개 키 생성
           ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
-          echo "✅ SSH 키 페어 생성 완료"
 
-          # OS Login 강제 비활성화
-          echo "🔒 OS Login 비활성화..."
-          gcloud compute project-info add-metadata --metadata enable-oslogin=FALSE --quiet
+          # 2) 인스턴스 메타데이터에만 키 추가 (기존 키 보존 + runner 추가)
+          EXISTING_INST_KEYS="$(gcloud compute instances describe "$GCP_INSTANCE" \
+            --format="value(metadata.items[key=ssh-keys].value)" || true)"
+          printf "%s\nrunner:%s\n" "${EXISTING_INST_KEYS}" "$(cat ~/.ssh/google_compute_engine.pub)" > inst_keys.txt
+          gcloud compute instances add-metadata "$GCP_INSTANCE" \
+            --metadata-from-file ssh-keys=inst_keys.txt
 
-          # SSH 설정 파일 (더 안정적인 설정)
-          cat > ~/.ssh/config << EOF
-          Host compute.googleapis.com
-            HostName compute.googleapis.com
-            IdentityFile ~/.ssh/google_compute_engine
-            UserKnownHostsFile /dev/null
-            CheckHostIP no
-            StrictHostKeyChecking no
-            ServerAliveInterval 30
-            ServerAliveCountMax 5
-            ConnectTimeout 60
-            IdentitiesOnly yes
-          EOF
-          chmod 600 ~/.ssh/config
+          # (선택) 프로젝트 단위 키를 무시하도록 설정해 충돌 방지
+          gcloud compute instances add-metadata "$GCP_INSTANCE" \
+            --metadata block-project-ssh-keys=TRUE
 
-          # 프로젝트 수준에서 SSH 키 관리 (더 안정적)
-          echo "📝 프로젝트 SSH 키 업데이트..."
+          # 3) 전파 대기 (게스트 에이전트 적용 대기)
+          sleep 30
 
-          # 현재 키 백업
-          gcloud compute project-info describe \
-            --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt 2>/dev/null || echo "" > current_keys.txt
-
-          # runner 사용자 키 제거
-          grep -v "^runner:" current_keys.txt > filtered_keys.txt 2>/dev/null || touch filtered_keys.txt
-
-          # 새 키 추가
-          USERNAME="runner"
-          PUBLIC_KEY=$(cat ~/.ssh/google_compute_engine.pub)
-          echo "${USERNAME}:${PUBLIC_KEY}" >> filtered_keys.txt
-
-          # 빈 줄 제거
-          grep -v "^$" filtered_keys.txt > final_keys.txt
-
-          # 메타데이터 업데이트
-          gcloud compute project-info add-metadata \
-            --metadata-from-file ssh-keys=final_keys.txt \
-            --quiet
-
-          echo "⏳ SSH 키 전파 대기 (90초)..."
-          sleep 90
-
-          # 연결 테스트
-          echo "🔍 SSH 연결 테스트..."
-          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-            --zone=${{ env.GCP_ZONE }} \
-            --command="echo 'SSH 연결 테스트 성공'" \
+          # 4) 첫 연결 디버그 (실패해도 다음 스텝에서 재시도하므로 여기선 진단만)
+          gcloud compute ssh "runner@${GCP_INSTANCE}" \
             --ssh-key-file=~/.ssh/google_compute_engine \
-            --quiet || echo "⚠️ 초기 연결 테스트 실패 (정상적일 수 있음)"
+            --command="echo 'ssh-ok'" \
+            -- -vvv || true
 
-          # 정리
-          rm -f current_keys.txt filtered_keys.txt final_keys.txt
+          rm -f inst_keys.txt
 
       # 주 배포 방법: Git pull을 통한 코드 동기화
       - name: Deploy via Git Pull
@@ -142,7 +108,7 @@ jobs:
                 echo '✅ 배포 완료!'
               " \
               --ssh-key-file=~/.ssh/google_compute_engine \
-              --quiet; then
+              --quiet -- -vvv; then
               echo "✅ Git 배포 성공!"
               exit 0
             else
@@ -225,9 +191,9 @@ jobs:
           for i in {1..10}; do
             if gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
               --zone=${{ env.GCP_ZONE }} \
-              --command="test -f ~/deployment-success" \
-              --ssh-key-file=~/.ssh/google_compute_engine \
-              --quiet 2>/dev/null; then
+            --command="test -f ~/deployment-success" \
+            --ssh-key-file=~/.ssh/google_compute_engine \
+            --quiet -- -vvv 2>/dev/null; then
               echo "✅ Startup Script 배포 성공!"
               break
             else
@@ -294,7 +260,7 @@ jobs:
             --zone=${{ env.GCP_ZONE }} \
             --command="echo 'SSH 연결 성공' && uptime" \
             --ssh-key-file=~/.ssh/google_compute_engine \
-            --quiet || echo "SSH 연결 실패"
+            --quiet -- -vvv || echo "SSH 연결 실패"
 
       # 정리
       - name: Cleanup
