@@ -37,6 +37,12 @@ jobs:
         run: |
           gcloud services enable cloudresourcemanager.googleapis.com compute.googleapis.com --project "$GCP_PROJECT_ID"
 
+      - name: Enable OS Login on the instance
+        run: |
+          gcloud compute instances add-metadata "$GCP_INSTANCE" \
+            --zone "$GCP_ZONE" \
+            --metadata enable-oslogin=TRUE
+
       - name: Print OS Login / metadata (non-blocking)
         run: |
           echo "Project enable-oslogin:"
@@ -52,7 +58,7 @@ jobs:
         run: |
           set -euxo pipefail
           for attempt in 1 2 3; do
-            if gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+            if gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
               set -euxo pipefail
               REPO="$HOME/spam_analyzer_web"
               if [ ! -d "$REPO/.git" ]; then
@@ -144,7 +150,7 @@ jobs:
           # 배포 성공 확인
           for i in {1..10}; do
             if gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" \
-            --command="test -f ~/deployment-success" \
+            --zone="$GCP_ZONE" --command="test -f ~/deployment-success" \
             -- -vvv 2>/dev/null; then
               echo "✅ Startup Script 배포 성공!"
               break
@@ -209,14 +215,14 @@ jobs:
           # 간단한 연결 테스트
           echo "🔍 네트워크 연결 테스트:"
           gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" \
-            --command="echo 'SSH 연결 성공' && uptime" \
+            --zone="$GCP_ZONE" --command="echo 'SSH 연결 성공' && uptime" \
             -- -vvv || echo "SSH 연결 실패"
 
       # 진단 (non-blocking)
       - name: Diagnose (non-blocking)
         if: failure()
         run: |
-          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc 'echo "SSH OK" && whoami && id || true'
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc 'echo "SSH OK" && whoami && id || true'
 
       # 정리
       - name: Cleanup

@@ -54,6 +54,12 @@ jobs:
         run: |
           gcloud services enable cloudresourcemanager.googleapis.com compute.googleapis.com --project "$GCP_PROJECT_ID"
 
+      - name: Enable OS Login on the instance
+        run: |
+          gcloud compute instances add-metadata "$GCP_INSTANCE" \
+            --zone "$GCP_ZONE" \
+            --metadata enable-oslogin=TRUE
+
       - name: Print OS Login / metadata (non-blocking)
         run: |
           echo "Project enable-oslogin:"
@@ -65,18 +71,15 @@ jobs:
 
       - name: Copy build (OS Login)
         run: |
-          # 패키징
           tar -czf mcp-server-build.tar.gz -C ./mcp-server .
-
-          # 업로드 (OS Login: 사용자/키 지정 불필요)
           gcloud --verbosity=debug compute scp \
             mcp-server-build.tar.gz "${GCP_INSTANCE}:~/" \
-            --quiet
+            --zone="$GCP_ZONE" --quiet
 
       # 서버 재시작 및 설정 (OS Login 방식)
       - name: Deploy and restart server
         run: |
-          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
             set -euxo pipefail
             REPO_DIR="$HOME/spam_analyzer_web/mcp-server"
             mkdir -p "$REPO_DIR"
@@ -91,18 +94,15 @@ jobs:
             export MCP_SERVER_PORT=3001
             export MCP_SERVER_HOST=0.0.0.0
 
-            if [ -f "./start-http-server.js" ]; then
-              ENTRY="./start-http-server.js"
-            elif [ -f "./dist/index.js" ]; then
-              ENTRY="./dist/index.js"
-            else
-              echo "❌ 엔트리 파일 없음"; ls -la; exit 1
-            fi
+            if [ -f "./start-http-server.js" ]; then ENTRY="./start-http-server.js";
+            elif [ -f "./dist/index.js" ]; then ENTRY="./dist/index.js";
+            else echo "❌ 엔트리 없음"; ls -la; exit 1; fi
 
             pm2 stop mcp-server 2>/dev/null || true
             pm2 delete mcp-server 2>/dev/null || true
             pm2 start "$ENTRY" --name mcp-server
             pm2 save
+
             sleep 5
             curl -f http://localhost:3001/health
           '
@@ -143,7 +143,7 @@ jobs:
         if: failure()
         run: |
           echo "🔄 Starting rollback process..."
-          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
             set -euxo pipefail
             LATEST_BACKUP=$(ls -1t ~/mcp-server-backup-* 2>/dev/null | head -n1 || true)
             if [ -n "$LATEST_BACKUP" ]; then
