@@ -126,7 +126,7 @@ jobs:
           done
           
           echo "❌ Git 배포 실패 - Cloud Storage 방법으로 진행"
-          exit 1
+            exit 1
 
       # 대안 2: Cloud Storage를 통한 배포 (Git 방법 실패 시)
       - name: Deploy via Cloud Storage (Method 2)
@@ -134,9 +134,31 @@ jobs:
         run: |
           echo "📦 Cloud Storage를 통한 배포 시작..."
           
-          # 임시 버킷 생성
+          # 임시 버킷 생성 (권한 문제 시 대안 이름 사용)
           BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-temp-deploy"
-          gsutil mb gs://$BUCKET_NAME 2>/dev/null || echo "버킷이 이미 존재합니다."
+          
+          # 버킷 생성 시도
+          if ! gsutil mb gs://$BUCKET_NAME 2>/dev/null; then
+            echo "기본 버킷 생성 실패, 대안 이름 시도..."
+            BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-deployment"
+            
+            if ! gsutil mb gs://$BUCKET_NAME 2>/dev/null; then
+              echo "버킷 생성 권한이 없습니다. 기존 버킷 사용 시도..."
+              
+              # 기존 버킷 목록에서 사용 가능한 버킷 찾기
+              EXISTING_BUCKETS=$(gsutil ls 2>/dev/null | grep -E "(temp|deploy|storage)" | head -1 | sed 's|gs://||' | sed 's|/||')
+              
+              if [ -n "$EXISTING_BUCKETS" ]; then
+                BUCKET_NAME="$EXISTING_BUCKETS"
+                echo "기존 버킷 사용: $BUCKET_NAME"
+              else
+                echo "❌ 사용 가능한 버킷이 없습니다. Cloud Storage 방법 건너뛰기..."
+                exit 1
+              fi
+            fi
+          fi
+          
+          echo "✅ 버킷 확정: $BUCKET_NAME"
           
           # 소스 코드 압축
           echo "🗜️ 소스 코드 압축 중..."
@@ -228,6 +250,65 @@ jobs:
             rm -f final_update.sh
           fi
 
+      # 대안 3: Metadata를 통한 스크립트 전달 (Cloud Storage 권한 불필요)
+      - name: Deploy via Instance Metadata (Method 3)
+        if: steps.git_deploy.outcome == 'failure'
+        continue-on-error: true
+        run: |
+          echo "🔧 Instance Metadata를 통한 배포 시도..."
+          
+          # 업데이트 스크립트를 base64로 인코딩
+          cat > update_script.sh << 'SCRIPT'
+          #!/bin/bash
+          cd ~/spam_analyzer_web || exit 1
+          echo "📦 Git 저장소 업데이트..."
+          git fetch origin && git reset --hard origin/main
+          echo "🔨 MCP 서버 빌드..."
+          cd mcp-server && npm install --production && npm run build
+          echo "🚀 배포 스크립트 실행..."
+          cd .. && chmod +x deploy-with-mcp.sh && ./deploy-with-mcp.sh
+          echo "✅ 배포 완료!"
+          SCRIPT
+          
+          # 스크립트를 base64로 인코딩
+          ENCODED_SCRIPT=$(base64 -w 0 update_script.sh)
+          
+          # 인스턴스 메타데이터에 스크립트 저장
+          echo "📝 인스턴스 메타데이터에 스크립트 저장..."
+          gcloud compute instances add-metadata ${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --metadata "update-script=$ENCODED_SCRIPT"
+          
+          # 인스턴스에서 메타데이터 읽고 실행
+          echo "🚀 메타데이터에서 스크립트 실행..."
+          if gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --command="
+              echo '📥 메타데이터에서 스크립트 가져오기...'
+              curl -H 'Metadata-Flavor: Google' \
+                'http://metadata.google.internal/computeMetadata/v1/instance/attributes/update-script' \
+                | base64 -d > ~/update_script.sh
+              
+              chmod +x ~/update_script.sh
+              echo '🔨 업데이트 스크립트 실행...'
+              ~/update_script.sh
+              
+              echo '🧹 정리...'
+              rm -f ~/update_script.sh
+            " \
+            --ssh-key-file=~/.ssh/google_compute_engine; then
+            echo "✅ Metadata 방법으로 배포 성공!"
+          else
+            echo "❌ Metadata 방법도 실패"
+          fi
+          
+          # 메타데이터 정리
+          gcloud compute instances remove-metadata ${{ env.GCP_INSTANCE }} \
+            --zone=${{ env.GCP_ZONE }} \
+            --keys=update-script 2>/dev/null || true
+          
+          rm -f update_script.sh
+
       # 배포 검증
       - name: Verify deployment
         run: |
@@ -261,7 +342,7 @@ jobs:
                 if [ $attempt -eq 3 ]; then
                   echo "🚨 $NAME 서비스 검증 실패!"
                 else
-                  sleep 10
+          sleep 10
                 fi
               fi
             done
