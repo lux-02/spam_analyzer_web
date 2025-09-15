@@ -117,7 +117,7 @@ jobs:
         run: |
           # Cloud Storage 버킷 생성 (권한 문제 해결)
           BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-deployment-temp"
-          
+
           if ! gsutil mb gs://$BUCKET_NAME 2>/dev/null; then
             echo "기본 버킷 생성 실패, 대안 시도..."
             BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-mcp-deploy"

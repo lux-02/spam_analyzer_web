@@ -32,35 +32,35 @@ jobs:
       - name: Setup SSH with retry mechanism
         run: |
           echo "🔑 SSH 키 설정 시작..."
-          
+
           # SSH 키 설정
           mkdir -p ~/.ssh
           echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
           chmod 600 ~/.ssh/google_compute_engine
-          
+
           # 공개 키 생성 (개인 키로부터)
           ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
           echo "✅ SSH 키 생성 완료"
-          
+
           # OS Login 비활성화 (중요!)
           echo "🔒 OS Login 비활성화..."
           gcloud compute project-info add-metadata --metadata enable-oslogin=FALSE
-          
+
           # 기존 SSH 키 메타데이터 가져오기
           echo "📋 기존 SSH 키 확인..."
           gcloud compute project-info describe --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt 2>/dev/null || touch current_keys.txt
-          
+
           # runner 키 제거 (있다면)
           grep -v "^runner:" current_keys.txt > temp_keys.txt 2>/dev/null || touch temp_keys.txt
-          
+
           # 새 키 추가
           echo "runner:$(cat ~/.ssh/google_compute_engine.pub)" >> temp_keys.txt
-          
+
           # 빈 줄 제거 후 메타데이터 업데이트
           grep -v "^$" temp_keys.txt > final_keys.txt
           echo "📝 SSH 키 메타데이터 업데이트..."
           gcloud compute project-info add-metadata --metadata-from-file ssh-keys=final_keys.txt
-          
+
           # SSH 설정
           cat > ~/.ssh/config << EOF
           Host *
@@ -72,10 +72,10 @@ jobs:
             IdentitiesOnly yes
           EOF
           chmod 600 ~/.ssh/config
-          
+
           echo "⏳ SSH 키 전파 대기 (120초)..."
           sleep 120
-          
+
           # 정리
           rm -f current_keys.txt temp_keys.txt final_keys.txt
 
@@ -85,7 +85,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "🔄 Git을 통한 배포 시작..."
-          
+
           # 최대 2번 시도 (이미 120초 대기함)
           for attempt in 1 2; do
             echo "🔗 SSH 연결 시도 $attempt/2..."
@@ -124,7 +124,7 @@ jobs:
               fi
             fi
           done
-          
+
           echo "❌ Git 배포 실패 - Cloud Storage 방법으로 진행"
             exit 1
 
@@ -133,10 +133,10 @@ jobs:
         if: steps.git_deploy.outcome == 'failure'
         run: |
           echo "📦 Cloud Storage를 통한 배포 시작..."
-          
+
           # 임시 버킷 생성 (권한 문제 시 대안 이름 사용)
           BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-temp-deploy"
-          
+
           # 버킷 생성 시도
           if ! gsutil mb gs://$BUCKET_NAME 2>/dev/null; then
             echo "기본 버킷 생성 실패, 대안 이름 시도..."
@@ -157,9 +157,9 @@ jobs:
               fi
             fi
           fi
-          
+
           echo "✅ 버킷 확정: $BUCKET_NAME"
-          
+
           # 소스 코드 압축
           echo "🗜️ 소스 코드 압축 중..."
           tar --exclude='.git' \
@@ -168,14 +168,14 @@ jobs:
               --exclude='mcp-server/dist' \
               --exclude='flask-server/venv' \
               -czf source-code.tar.gz .
-          
+
           # Cloud Storage에 업로드
           echo "☁️ Cloud Storage에 업로드 중..."
           gsutil cp source-code.tar.gz gs://$BUCKET_NAME/
-          
+
           # 배포 스크립트를 더 간단하게 만들기
           echo "🚀 Cloud Storage 배포 실행..."
-          
+
           # SSH 연결 시도 (Cloud Storage 방법으로)
           SUCCESS=false
           for attempt in 1 2 3; do
@@ -218,11 +218,11 @@ jobs:
               fi
             fi
           done
-          
+
           # 임시 파일 정리
           gsutil rm gs://$BUCKET_NAME/source-code.tar.gz 2>/dev/null || true
           rm -f source-code.tar.gz
-          
+
           if [ "$SUCCESS" = "false" ]; then
             echo "🚨 Cloud Storage 배포도 실패. 최후 방법 시도..."
             
@@ -256,7 +256,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "🔧 Instance Metadata를 통한 배포 시도..."
-          
+
           # 업데이트 스크립트를 base64로 인코딩
           cat > update_script.sh << 'SCRIPT'
           #!/bin/bash
@@ -269,16 +269,16 @@ jobs:
           cd .. && chmod +x deploy-with-mcp.sh && ./deploy-with-mcp.sh
           echo "✅ 배포 완료!"
           SCRIPT
-          
+
           # 스크립트를 base64로 인코딩
           ENCODED_SCRIPT=$(base64 -w 0 update_script.sh)
-          
+
           # 인스턴스 메타데이터에 스크립트 저장
           echo "📝 인스턴스 메타데이터에 스크립트 저장..."
           gcloud compute instances add-metadata ${{ env.GCP_INSTANCE }} \
             --zone=${{ env.GCP_ZONE }} \
             --metadata "update-script=$ENCODED_SCRIPT"
-          
+
           # 인스턴스에서 메타데이터 읽고 실행
           echo "🚀 메타데이터에서 스크립트 실행..."
           if gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
@@ -301,12 +301,12 @@ jobs:
           else
             echo "❌ Metadata 방법도 실패"
           fi
-          
+
           # 메타데이터 정리
           gcloud compute instances remove-metadata ${{ env.GCP_INSTANCE }} \
             --zone=${{ env.GCP_ZONE }} \
             --keys=update-script 2>/dev/null || true
-          
+
           rm -f update_script.sh
 
       # 배포 검증
