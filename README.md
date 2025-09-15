@@ -141,33 +141,61 @@ http://localhost:3000
 이 프로젝트는 GitHub Actions를 통해 GCP에 자동 배포됩니다.
 
 ### 배포 트리거
+
 - `main` 브랜치에 push 시 자동 배포
 - 수동 배포: GitHub Actions 탭에서 "Run workflow" 클릭
 
 ### 배포 구성
+
 - **메인 웹앱**: Next.js (포트 3000)
-- **Flask API**: Python Flask (포트 5001)  
+- **Flask API**: Python Flask (포트 5001)
 - **MCP 서버**: TypeScript (포트 3001)
 - **웹 서버**: Nginx (포트 80/443)
 
-### SSH 키 문제 해결
-배포 중 SSH 연결 오류가 발생하면:
+### 배포 문제 해결
+
+GitHub Actions 배포가 실패하는 경우 다음 방법들을 시도해보세요:
+
+#### 1. SSH 연결 문제 해결
 
 ```bash
-# 로컬에서 SSH 키 수정 스크립트 실행
+# 환경 변수 설정
 export GCP_PROJECT_ID="confident-trail-468806-t9"
 export GCP_INSTANCE="instance-20250812-075321"
 export GCP_ZONE="us-central1-c"
-./scripts/fix-ssh-keys.sh
+
+# 수동 배포 스크립트 실행
+./scripts/fix-ssh-deployment.sh
 ```
 
+#### 2. 일반적인 문제들
+
+**SSH Permission Denied:**
+
+- SSH 키 전파 시간 부족 (자동으로 대기 시간 조정됨)
+- OS Login 설정 충돌 (자동으로 비활성화됨)
+- 인스턴스 상태 확인 (RUNNING 상태 확인)
+
+**Cloud Storage 권한 문제:**
+
+- 버킷 생성 권한 부족 시 대안 방법 사용
+- Startup Script를 통한 배포로 자동 전환
+
+**네트워크 연결 문제:**
+
+- 인스턴스 방화벽 규칙 확인
+- 외부 IP 할당 상태 확인
+
 ### 배포 상태 확인
+
 - **GitHub Actions**: 배포 진행 상황 확인
 - **라이브 사이트**: https://darkwinterlab.com
 - **MCP API**: https://darkwinterlab.com/mcp/health
 
 ### 클로드 MCP 연결
+
 클로드에서 다음 URL로 Custom Connector 추가:
+
 ```
 https://darkwinterlab.com/mcp/jsonrpc
 ```

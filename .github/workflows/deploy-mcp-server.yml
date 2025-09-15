@@ -45,47 +45,55 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure SSH
+      - name: Setup SSH Authentication
         run: |
-          echo "🔑 SSH 키 설정 시작..."
+          echo "🔑 SSH 인증 설정 시작..."
+
+          # SSH 디렉토리 생성
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
 
           # SSH 키 설정
-          mkdir -p ~/.ssh
           echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
           chmod 600 ~/.ssh/google_compute_engine
 
           # 공개 키 생성
           ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
+          echo "✅ SSH 키 페어 생성 완료"
 
-          # OS Login 비활성화
+          # OS Login 강제 비활성화
           echo "🔒 OS Login 비활성화..."
-          gcloud compute project-info add-metadata --metadata enable-oslogin=FALSE
+          gcloud compute project-info add-metadata --metadata enable-oslogin=FALSE --quiet
 
-          # SSH 키 메타데이터 업데이트
-          echo "📝 SSH 키 메타데이터 업데이트..."
-          gcloud compute project-info describe --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt 2>/dev/null || touch current_keys.txt
-          grep -v "^runner:" current_keys.txt > temp_keys.txt 2>/dev/null || touch temp_keys.txt
-          echo "runner:$(cat ~/.ssh/google_compute_engine.pub)" >> temp_keys.txt
-          grep -v "^$" temp_keys.txt > final_keys.txt
-          gcloud compute project-info add-metadata --metadata-from-file ssh-keys=final_keys.txt
-
-          # SSH 설정 파일 생성
+          # SSH 설정 파일
           cat > ~/.ssh/config << EOF
-          Host *
-            StrictHostKeyChecking no
+          Host compute.googleapis.com
+            HostName compute.googleapis.com
+            IdentityFile ~/.ssh/google_compute_engine
             UserKnownHostsFile /dev/null
-            ServerAliveInterval 60
-            ServerAliveCountMax 10
-            ConnectTimeout 30
+            CheckHostIP no
+            StrictHostKeyChecking no
+            ServerAliveInterval 30
+            ServerAliveCountMax 5
+            ConnectTimeout 60
             IdentitiesOnly yes
           EOF
           chmod 600 ~/.ssh/config
 
-          echo "⏳ SSH 키 전파 대기 (90초)..."
-          sleep 90
+          # 프로젝트 SSH 키 업데이트
+          echo "📝 프로젝트 SSH 키 업데이트..."
+          gcloud compute project-info describe \
+            --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt 2>/dev/null || echo "" > current_keys.txt
+          grep -v "^runner:" current_keys.txt > filtered_keys.txt 2>/dev/null || touch filtered_keys.txt
+          echo "runner:$(cat ~/.ssh/google_compute_engine.pub)" >> filtered_keys.txt
+          grep -v "^$" filtered_keys.txt > final_keys.txt
+          gcloud compute project-info add-metadata --metadata-from-file ssh-keys=final_keys.txt --quiet
+
+          echo "⏳ SSH 키 전파 대기 (60초)..."
+          sleep 60
 
           # 정리
-          rm -f current_keys.txt temp_keys.txt final_keys.txt
+          rm -f current_keys.txt filtered_keys.txt final_keys.txt
 
       # 대안 방법 1: rsync 사용 (SSH 키 전파 문제 회피)
       - name: Sync files via rsync (Method 1)
