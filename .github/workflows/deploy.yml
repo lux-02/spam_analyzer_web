@@ -33,57 +33,49 @@ jobs:
           gcloud config set project "$GCP_PROJECT_ID"
           gcloud config set compute/zone "$GCP_ZONE"
 
-      - name: Print OS Login status (non-blocking)
+      - name: Enable required APIs
+        run: |
+          gcloud services enable cloudresourcemanager.googleapis.com compute.googleapis.com --project "$GCP_PROJECT_ID"
+
+      - name: Print OS Login / metadata (non-blocking)
         run: |
           echo "Project enable-oslogin:"
           gcloud compute project-info describe --format="get(commonInstanceMetadata.items.enable-oslogin)" || true
           echo "Instance enable-oslogin:"
           gcloud compute instances describe "$GCP_INSTANCE" --format="get(metadata.items.enable-oslogin)" || true
+          echo "Instance block-project-ssh-keys:"
+          gcloud compute instances describe "$GCP_INSTANCE" --format="get(metadata.items.block-project-ssh-keys)" || true
 
       # 주 배포 방법: Git pull을 통한 코드 동기화 (OS Login 방식)
-      - name: Deploy via Git Pull
+      - name: Deploy via Git Pull (OS Login)
         id: git_deploy
         run: |
           set -euxo pipefail
           for attempt in 1 2 3; do
-            echo "🔗 SSH 연결 시도 $attempt/3..."
-            if gcloud compute ssh "${GCP_INSTANCE}" \
-              --command="
-                echo '✅ SSH 연결 성공!'
-                REPO_DIR=\$HOME/spam_analyzer_web
+            if gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+              set -euxo pipefail
+              REPO="$HOME/spam_analyzer_web"
+              if [ ! -d "$REPO/.git" ]; then
+                git clone https://github.com/lux-02/spam_analyzer_web.git "$REPO"
+              fi
+              cd "$REPO"
+              git fetch origin
+              git reset --hard origin/main
+              git clean -fd
 
-                if [ ! -d \"\$REPO_DIR\" ]; then
-                  echo '📁 저장소 초기 클론...'
-                  git clone https://github.com/lux-02/spam_analyzer_web.git \"\$REPO_DIR\"
-                fi
+              cd mcp-server
+              npm ci --omit=dev || npm install --production
+              npm run build
 
-                cd \"\$REPO_DIR\"
-                echo '📦 Git 저장소 업데이트...'
-                git fetch origin
-                git reset --hard origin/main
-                git clean -fd
-
-                echo '🔨 MCP 서버 빌드...'
-                cd mcp-server
-                npm install --production --silent || npm ci --omit=dev
-                npm run build
-
-                echo '🚀 배포 스크립트 실행...'
-                cd ..
-                chmod +x deploy-with-mcp.sh
-                ./deploy-with-mcp.sh
-
-                echo '✅ 배포 완료!'
-              " -- -vvv; then
-              echo "✅ Git 배포 성공!"
-              exit 0
-            else
-              echo "❌ SSH 실패 (시도 $attempt/3)"
-              [ $attempt -lt 3 ] && echo "30초 후 재시도..." && sleep 30
+              cd ..
+              chmod +x deploy-with-mcp.sh
+              ./deploy-with-mcp.sh
+            '; then
+              echo "✅ Git 배포 성공"; exit 0
             fi
+            echo "❌ SSH 실패 (재시도 대기 30s)"; sleep 30
           done
-          echo "❌ Git 배포 실패"
-          exit 1
+          echo "❌ Git 배포 실패"; exit 1
 
       # 대안 방법: Compute Engine startup script를 통한 배포 (SSH 실패 시)
       - name: Deploy via Startup Script (Fallback)
@@ -151,7 +143,7 @@ jobs:
 
           # 배포 성공 확인
           for i in {1..10}; do
-            if gcloud compute ssh "${GCP_INSTANCE}" \
+            if gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" \
             --command="test -f ~/deployment-success" \
             -- -vvv 2>/dev/null; then
               echo "✅ Startup Script 배포 성공!"
@@ -216,9 +208,15 @@ jobs:
 
           # 간단한 연결 테스트
           echo "🔍 네트워크 연결 테스트:"
-          gcloud compute ssh "${GCP_INSTANCE}" \
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" \
             --command="echo 'SSH 연결 성공' && uptime" \
             -- -vvv || echo "SSH 연결 실패"
+
+      # 진단 (non-blocking)
+      - name: Diagnose (non-blocking)
+        if: failure()
+        run: |
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc 'echo "SSH OK" && whoami && id || true'
 
       # 정리
       - name: Cleanup

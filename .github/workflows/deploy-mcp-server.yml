@@ -50,23 +50,33 @@ jobs:
           gcloud config set project "$GCP_PROJECT_ID"
           gcloud config set compute/zone "$GCP_ZONE"
 
-      - name: Print OS Login status (non-blocking)
+      - name: Enable required APIs
+        run: |
+          gcloud services enable cloudresourcemanager.googleapis.com compute.googleapis.com --project "$GCP_PROJECT_ID"
+
+      - name: Print OS Login / metadata (non-blocking)
         run: |
           echo "Project enable-oslogin:"
           gcloud compute project-info describe --format="get(commonInstanceMetadata.items.enable-oslogin)" || true
           echo "Instance enable-oslogin:"
           gcloud compute instances describe "$GCP_INSTANCE" --format="get(metadata.items.enable-oslogin)" || true
+          echo "Instance block-project-ssh-keys:"
+          gcloud compute instances describe "$GCP_INSTANCE" --format="get(metadata.items.block-project-ssh-keys)" || true
 
-      - name: Package build
-        run: tar -czf mcp-server-build.tar.gz -C ./mcp-server .
+      - name: Copy build (OS Login)
+        run: |
+          # 패키징
+          tar -czf mcp-server-build.tar.gz -C ./mcp-server .
 
-      - name: Copy build
-        run: gcloud compute scp mcp-server-build.tar.gz "${GCP_INSTANCE}:~/" -- -vvv
+          # 업로드 (OS Login: 사용자/키 지정 불필요)
+          gcloud --verbosity=debug compute scp \
+            mcp-server-build.tar.gz "${GCP_INSTANCE}:~/" \
+            --quiet
 
       # 서버 재시작 및 설정 (OS Login 방식)
       - name: Deploy and restart server
         run: |
-          gcloud compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
             set -euxo pipefail
             REPO_DIR="$HOME/spam_analyzer_web/mcp-server"
             mkdir -p "$REPO_DIR"
@@ -75,13 +85,12 @@ jobs:
 
             cd "$REPO_DIR"
             command -v pm2 >/dev/null 2>&1 || npm install -g pm2
-            npm install --production || npm ci --omit=dev
+            npm ci --omit=dev || npm install --production
 
             export HTTP_MODE=true
             export MCP_SERVER_PORT=3001
             export MCP_SERVER_HOST=0.0.0.0
 
-            # 엔트리 탐색
             if [ -f "./start-http-server.js" ]; then
               ENTRY="./start-http-server.js"
             elif [ -f "./dist/index.js" ]; then
@@ -134,23 +143,14 @@ jobs:
         if: failure()
         run: |
           echo "🔄 Starting rollback process..."
-          gcloud compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
-            # 가장 최근 백업 찾기
-            LATEST_BACKUP=$(ls -1t ~/mcp-server-backup-* 2>/dev/null | head -n1)
-            
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+            set -euxo pipefail
+            LATEST_BACKUP=$(ls -1t ~/mcp-server-backup-* 2>/dev/null | head -n1 || true)
             if [ -n "$LATEST_BACKUP" ]; then
-              echo "Rolling back to: $LATEST_BACKUP"
-              
-              # 현재 실패한 버전 제거
-              rm -rf ~/spam_analyzer_web/mcp-server
-              
-              # 백업에서 복원
+              rm -rf ~/spam_analyzer_web/mcp-server || true
               cp -r "$LATEST_BACKUP" ~/spam_analyzer_web/mcp-server
-              
-              # 서버 재시작
               cd ~/spam_analyzer_web/mcp-server
               pm2 restart mcp-server || pm2 start start-http-server.js --name mcp-server
-              
               echo "✅ Rollback completed"
             else
               echo "❌ No backup found for rollback"
