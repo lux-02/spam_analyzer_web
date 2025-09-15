@@ -33,93 +33,55 @@ jobs:
           gcloud config set project "$GCP_PROJECT_ID"
           gcloud config set compute/zone "$GCP_ZONE"
 
-      # 개선된 SSH 키 설정 - 인스턴스 메타데이터 방식으로 안정화
-      - name: Setup SSH Authentication
+      - name: Print OS Login status (non-blocking)
         run: |
-          set -euxo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          echo "Project enable-oslogin:"
+          gcloud compute project-info describe --format="get(commonInstanceMetadata.items.enable-oslogin)" || true
+          echo "Instance enable-oslogin:"
+          gcloud compute instances describe "$GCP_INSTANCE" --format="get(metadata.items.enable-oslogin)" || true
 
-          # 1) 키 파일 생성
-          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
-          chmod 600 ~/.ssh/google_compute_engine
-          ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
-
-          # 2) 인스턴스 메타데이터에만 키 추가 (기존 키 보존 + runner 추가)
-          EXISTING_INST_KEYS="$(gcloud compute instances describe "$GCP_INSTANCE" \
-            --format="value(metadata.items[key=ssh-keys].value)" || true)"
-          printf "%s\nrunner:%s\n" "${EXISTING_INST_KEYS}" "$(cat ~/.ssh/google_compute_engine.pub)" > inst_keys.txt
-          gcloud compute instances add-metadata "$GCP_INSTANCE" \
-            --metadata-from-file ssh-keys=inst_keys.txt
-
-          # (선택) 프로젝트 단위 키를 무시하도록 설정해 충돌 방지
-          gcloud compute instances add-metadata "$GCP_INSTANCE" \
-            --metadata block-project-ssh-keys=TRUE
-
-          # 3) 전파 대기 (게스트 에이전트 적용 대기)
-          sleep 30
-
-          # 4) 첫 연결 디버그 (실패해도 다음 스텝에서 재시도하므로 여기선 진단만)
-          gcloud compute ssh "runner@${GCP_INSTANCE}" \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            --command="echo 'ssh-ok'" \
-            -- -vvv || true
-
-          rm -f inst_keys.txt
-
-      # 주 배포 방법: Git pull을 통한 코드 동기화
+      # 주 배포 방법: Git pull을 통한 코드 동기화 (OS Login 방식)
       - name: Deploy via Git Pull
         id: git_deploy
         run: |
-          echo "🔄 Git을 통한 배포 시작..."
-
-          # SSH 연결 시도 (최대 3번, 각각 더 짧은 간격)
+          set -euxo pipefail
           for attempt in 1 2 3; do
             echo "🔗 SSH 연결 시도 $attempt/3..."
-            
-            if gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-              --zone=${{ env.GCP_ZONE }} \
+            if gcloud compute ssh "${GCP_INSTANCE}" \
               --command="
                 echo '✅ SSH 연결 성공!'
-                
-                # 디렉토리 확인 및 생성
-                if [ ! -d ~/spam_analyzer_web ]; then
+                REPO_DIR=\$HOME/spam_analyzer_web
+
+                if [ ! -d \"\$REPO_DIR\" ]; then
                   echo '📁 저장소 초기 클론...'
-                  git clone https://github.com/lux-02/spam_analyzer_web.git ~/spam_analyzer_web
+                  git clone https://github.com/lux-02/spam_analyzer_web.git \"\$REPO_DIR\"
                 fi
-                
-                cd ~/spam_analyzer_web || exit 1
-                
+
+                cd \"\$REPO_DIR\"
                 echo '📦 Git 저장소 업데이트...'
                 git fetch origin
                 git reset --hard origin/main
                 git clean -fd
-                
+
                 echo '🔨 MCP 서버 빌드...'
                 cd mcp-server
-                npm install --production --silent
+                npm install --production --silent || npm ci --omit=dev
                 npm run build
-                
+
                 echo '🚀 배포 스크립트 실행...'
                 cd ..
                 chmod +x deploy-with-mcp.sh
                 ./deploy-with-mcp.sh
-                
+
                 echo '✅ 배포 완료!'
-              " \
-              --ssh-key-file=~/.ssh/google_compute_engine \
-              --quiet -- -vvv; then
+              " -- -vvv; then
               echo "✅ Git 배포 성공!"
               exit 0
             else
-              echo "❌ SSH 연결 실패 (시도 $attempt/3)"
-              if [ $attempt -lt 3 ]; then
-                echo "30초 후 재시도..."
-                sleep 30
-              fi
+              echo "❌ SSH 실패 (시도 $attempt/3)"
+              [ $attempt -lt 3 ] && echo "30초 후 재시도..." && sleep 30
             fi
           done
-
           echo "❌ Git 배포 실패"
           exit 1
 
@@ -189,11 +151,9 @@ jobs:
 
           # 배포 성공 확인
           for i in {1..10}; do
-            if gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-              --zone=${{ env.GCP_ZONE }} \
+            if gcloud compute ssh "${GCP_INSTANCE}" \
             --command="test -f ~/deployment-success" \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            --quiet -- -vvv 2>/dev/null; then
+            -- -vvv 2>/dev/null; then
               echo "✅ Startup Script 배포 성공!"
               break
             else
@@ -256,11 +216,9 @@ jobs:
 
           # 간단한 연결 테스트
           echo "🔍 네트워크 연결 테스트:"
-          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-            --zone=${{ env.GCP_ZONE }} \
+          gcloud compute ssh "${GCP_INSTANCE}" \
             --command="echo 'SSH 연결 성공' && uptime" \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            --quiet -- -vvv || echo "SSH 연결 실패"
+            -- -vvv || echo "SSH 연결 실패"
 
       # 정리
       - name: Cleanup
@@ -268,8 +226,7 @@ jobs:
         run: |
           echo "🧹 정리 시작..."
 
-          # SSH 키 파일 정리
-          rm -f ~/.ssh/google_compute_engine ~/.ssh/google_compute_engine.pub ~/.ssh/config
+          # 임시 파일 정리 (OS Login에서는 SSH 키 파일이 없음)
 
           # 임시 파일 정리
           rm -f startup-script.sh

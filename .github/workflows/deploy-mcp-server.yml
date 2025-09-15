@@ -50,146 +50,53 @@ jobs:
           gcloud config set project "$GCP_PROJECT_ID"
           gcloud config set compute/zone "$GCP_ZONE"
 
-      - name: Setup SSH Authentication
+      - name: Print OS Login status (non-blocking)
         run: |
-          set -euxo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          echo "Project enable-oslogin:"
+          gcloud compute project-info describe --format="get(commonInstanceMetadata.items.enable-oslogin)" || true
+          echo "Instance enable-oslogin:"
+          gcloud compute instances describe "$GCP_INSTANCE" --format="get(metadata.items.enable-oslogin)" || true
 
-          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
-          chmod 600 ~/.ssh/google_compute_engine
-          ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
+      - name: Package build
+        run: tar -czf mcp-server-build.tar.gz -C ./mcp-server .
 
-          EXISTING_INST_KEYS="$(gcloud compute instances describe "$GCP_INSTANCE" \
-            --format="value(metadata.items[key=ssh-keys].value)" || true)"
-          printf "%s\nrunner:%s\n" "${EXISTING_INST_KEYS}" "$(cat ~/.ssh/google_compute_engine.pub)" > inst_keys.txt
-          gcloud compute instances add-metadata "$GCP_INSTANCE" \
-            --metadata-from-file ssh-keys=inst_keys.txt
+      - name: Copy build
+        run: gcloud compute scp mcp-server-build.tar.gz "${GCP_INSTANCE}:~/" -- -vvv
 
-          gcloud compute instances add-metadata "$GCP_INSTANCE" \
-            --metadata block-project-ssh-keys=TRUE
-
-          sleep 30
-          rm -f inst_keys.txt
-
-      # 대안 방법 1: rsync 사용 (SSH 키 전파 문제 회피)
-      - name: Sync files via rsync (Method 1)
-        id: rsync_deploy
-        continue-on-error: true
-        run: |
-          # SSH 키 전파 대기
-          echo "SSH 키 전파를 위해 30초 대기..."
-          sleep 30
-
-          # rsync로 파일 동기화
-          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-            --zone=${{ env.GCP_ZONE }} \
-            --command="mkdir -p ~/spam_analyzer_web/mcp-server" \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            -- -vvv || echo "Directory creation failed, continuing..."
-
-          # 파일 압축
-          tar -czf mcp-server-build.tar.gz -C ./mcp-server .
-
-          # 압축 파일 업로드
-          gcloud compute scp mcp-server-build.tar.gz runner@${{ env.GCP_INSTANCE }}:~/ \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            -- -vvv
-
-      # 대안 방법 2: Cloud Storage 사용 (rsync 실패 시)
-      - name: Deploy via Cloud Storage (Method 2)
-        if: steps.rsync_deploy.outcome == 'failure'
-        run: |
-          # Cloud Storage 버킷 생성 (권한 문제 해결)
-          BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-deployment-temp"
-
-          if ! gsutil mb gs://$BUCKET_NAME 2>/dev/null; then
-            echo "기본 버킷 생성 실패, 대안 시도..."
-            BUCKET_NAME="${{ env.GCP_PROJECT_ID }}-mcp-deploy"
-            
-            if ! gsutil mb gs://$BUCKET_NAME 2>/dev/null; then
-              echo "버킷 생성 권한이 없습니다. 기존 버킷 찾기..."
-              EXISTING_BUCKETS=$(gsutil ls 2>/dev/null | head -1 | sed 's|gs://||' | sed 's|/||')
-              
-              if [ -n "$EXISTING_BUCKETS" ]; then
-                BUCKET_NAME="$EXISTING_BUCKETS"
-                echo "기존 버킷 사용: $BUCKET_NAME"
-              else
-                echo "❌ Cloud Storage 방법 실패"
-                exit 1
-              fi
-            fi
-          fi
-
-          # 파일 압축 및 업로드
-          tar -czf mcp-server-build.tar.gz -C ./mcp-server .
-          gsutil cp mcp-server-build.tar.gz gs://$BUCKET_NAME/
-
-          # 인스턴스에서 다운로드 및 배포
-          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-            --zone=${{ env.GCP_ZONE }} \
-            --command="
-              # Cloud Storage에서 파일 다운로드
-              gsutil cp gs://$BUCKET_NAME/mcp-server-build.tar.gz ~/
-              
-              # 기존 파일 백업
-              if [ -d ~/spam_analyzer_web/mcp-server ]; then
-                mv ~/spam_analyzer_web/mcp-server ~/mcp-server-backup-\$(date +%Y%m%d-%H%M%S)
-              fi
-              
-              # 새 파일 추출
-              mkdir -p ~/spam_analyzer_web/mcp-server
-              tar -xzf ~/mcp-server-build.tar.gz -C ~/spam_analyzer_web/mcp-server
-              
-              # 정리
-              rm ~/mcp-server-build.tar.gz
-            " \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            -- -vvv
-
-          # 임시 파일 정리
-          gsutil rm gs://$BUCKET_NAME/mcp-server-build.tar.gz
-
-      # 서버 재시작 및 설정
+      # 서버 재시작 및 설정 (OS Login 방식)
       - name: Deploy and restart server
         run: |
-          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-            --zone=${{ env.GCP_ZONE }} \
-            --command="
-              cd ~/spam_analyzer_web/mcp-server
-              
-              # 환경 변수 설정
-              export HTTP_MODE=true
-              export MCP_SERVER_PORT=3001
-              export MCP_SERVER_HOST=0.0.0.0
-              
-              # PM2가 설치되어 있는지 확인하고 설치
-              if ! command -v pm2 &> /dev/null; then
-                npm install -g pm2
-              fi
-              
-              # 기존 프로세스 중지
-              pm2 stop mcp-server 2>/dev/null || true
-              pm2 delete mcp-server 2>/dev/null || true
-              
-              # 의존성 설치 (필요시)
-              npm install --production
-              
-              # 서버 시작
-              pm2 start start-http-server.js --name mcp-server
-              pm2 save
-              
-              # 서버 상태 확인
-              sleep 5
-              pm2 status
-              
-              # 헬스 체크
-              curl -f http://localhost:3001/health || exit 1
-              
-              echo 'MCP Server deployment completed successfully!'
-            " \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            -- -vvv
+          gcloud compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+            set -euxo pipefail
+            REPO_DIR="$HOME/spam_analyzer_web/mcp-server"
+            mkdir -p "$REPO_DIR"
+            tar -xzf "$HOME/mcp-server-build.tar.gz" -C "$REPO_DIR"
+            rm -f "$HOME/mcp-server-build.tar.gz"
+
+            cd "$REPO_DIR"
+            command -v pm2 >/dev/null 2>&1 || npm install -g pm2
+            npm install --production || npm ci --omit=dev
+
+            export HTTP_MODE=true
+            export MCP_SERVER_PORT=3001
+            export MCP_SERVER_HOST=0.0.0.0
+
+            # 엔트리 탐색
+            if [ -f "./start-http-server.js" ]; then
+              ENTRY="./start-http-server.js"
+            elif [ -f "./dist/index.js" ]; then
+              ENTRY="./dist/index.js"
+            else
+              echo "❌ 엔트리 파일 없음"; ls -la; exit 1
+            fi
+
+            pm2 stop mcp-server 2>/dev/null || true
+            pm2 delete mcp-server 2>/dev/null || true
+            pm2 start "$ENTRY" --name mcp-server
+            pm2 save
+            sleep 5
+            curl -f http://localhost:3001/health
+          '
 
       # 배포 성공 확인
       - name: Verify deployment
@@ -227,32 +134,28 @@ jobs:
         if: failure()
         run: |
           echo "🔄 Starting rollback process..."
-          gcloud compute ssh runner@${{ env.GCP_INSTANCE }} \
-            --zone=${{ env.GCP_ZONE }} \
-            --command="
-              # 가장 최근 백업 찾기
-              LATEST_BACKUP=\$(ls -1t ~/mcp-server-backup-* 2>/dev/null | head -n1)
+          gcloud compute ssh "${GCP_INSTANCE}" -- -vvv -- bash -lc '
+            # 가장 최근 백업 찾기
+            LATEST_BACKUP=$(ls -1t ~/mcp-server-backup-* 2>/dev/null | head -n1)
+            
+            if [ -n "$LATEST_BACKUP" ]; then
+              echo "Rolling back to: $LATEST_BACKUP"
               
-              if [ -n \"\$LATEST_BACKUP\" ]; then
-                echo \"Rolling back to: \$LATEST_BACKUP\"
-                
-                # 현재 실패한 버전 제거
-                rm -rf ~/spam_analyzer_web/mcp-server
-                
-                # 백업에서 복원
-                cp -r \"\$LATEST_BACKUP\" ~/spam_analyzer_web/mcp-server
-                
-                # 서버 재시작
-                cd ~/spam_analyzer_web/mcp-server
-                pm2 restart mcp-server || pm2 start start-http-server.js --name mcp-server
-                
-                echo \"✅ Rollback completed\"
-              else
-                echo \"❌ No backup found for rollback\"
-              fi
-            " \
-            --ssh-key-file=~/.ssh/google_compute_engine \
-            -- -vvv || echo "Rollback failed"
+              # 현재 실패한 버전 제거
+              rm -rf ~/spam_analyzer_web/mcp-server
+              
+              # 백업에서 복원
+              cp -r "$LATEST_BACKUP" ~/spam_analyzer_web/mcp-server
+              
+              # 서버 재시작
+              cd ~/spam_analyzer_web/mcp-server
+              pm2 restart mcp-server || pm2 start start-http-server.js --name mcp-server
+              
+              echo "✅ Rollback completed"
+            else
+              echo "❌ No backup found for rollback"
+            fi
+          ' || echo "Rollback failed"
 
       # 정리
       - name: Cleanup
@@ -260,9 +163,5 @@ jobs:
         run: |
           # 로컬 임시 파일 정리
           rm -f mcp-server-build.tar.gz
-
-          # SSH 키 정리
-          rm -f ~/.ssh/google_compute_engine
-          rm -f ~/.ssh/config
 
           echo "🧹 Cleanup completed"
