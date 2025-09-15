@@ -76,33 +76,66 @@ jobs:
             mcp-server-build.tar.gz "${GCP_INSTANCE}:~/" \
             --zone="$GCP_ZONE" --quiet
 
-      # 서버 재시작 및 설정 (OS Login 방식)
-      - name: Deploy and restart server
+      # 서버 재시작 및 설정 (npx pm2, show logs on fail)
+      - name: Deploy and restart server (npx pm2, show logs on fail)
         run: |
           gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
             set -euxo pipefail
+
             REPO_DIR="$HOME/spam_analyzer_web/mcp-server"
             mkdir -p "$REPO_DIR"
+
+            # 새 아티팩트 적용
             tar -xzf "$HOME/mcp-server-build.tar.gz" -C "$REPO_DIR"
             rm -f "$HOME/mcp-server-build.tar.gz"
 
             cd "$REPO_DIR"
-            command -v pm2 >/dev/null 2>&1 || npm install -g pm2
-            npm ci --omit=dev || npm install --production
 
-            export HTTP_MODE=true
-            export MCP_SERVER_PORT=3001
-            export MCP_SERVER_HOST=0.0.0.0
+            # npm 로그 폴더 초기화
+            LOGDIR="$HOME/.npm/_logs"
+            rm -rf "$LOGDIR" || true
+            mkdir -p "$LOGDIR"
 
-            if [ -f "./start-http-server.js" ]; then ENTRY="./start-http-server.js";
-            elif [ -f "./dist/index.js" ]; then ENTRY="./dist/index.js";
-            else echo "❌ 엔트리 없음"; ls -la; exit 1; fi
+            # 의존성 설치 (락파일 있으면 ci, 없으면 install)
+            if [ -f package-lock.json ]; then
+              npm ci --omit=dev || {
+                echo "❌ npm ci 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+                tail -n +1 -v "$LOGDIR"/* || true
+                exit 1
+              }
+            else
+              npm install --production || {
+                echo "❌ npm install 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+                tail -n +1 -v "$LOGDIR"/* || true
+                exit 1
+              }
+            fi
 
-            pm2 stop mcp-server 2>/dev/null || true
-            pm2 delete mcp-server 2>/dev/null || true
-            pm2 start "$ENTRY" --name mcp-server
-            pm2 save
+            # 엔트리 자동 탐지
+            if [ -f "./start-http-server.js" ]; then
+              ENTRY="./start-http-server.js"
+            elif [ -f "./dist/index.js" ]; then
+              ENTRY="./dist/index.js"
+            else
+              echo "❌ 엔트리 파일 없음 (start-http-server.js 또는 dist/index.js)"; ls -la
+              exit 1
+            fi
 
+            # 글로벌 설치 대신 로컬 pm2 사용
+            if ! npm ls pm2 --depth=0 >/dev/null 2>&1; then
+              npm i pm2 --save || {
+                echo "❌ pm2 설치 실패. 로그:"; ls -l "$LOGDIR" || true
+                tail -n +1 -v "$LOGDIR"/* || true
+                exit 1
+              }
+            fi
+
+            npx pm2 stop mcp-server 2>/dev/null || true
+            npx pm2 delete mcp-server 2>/dev/null || true
+            npx pm2 start "$ENTRY" --name mcp-server
+            npx pm2 save
+
+            # 헬스체크
             sleep 5
             curl -f http://localhost:3001/health
           '
@@ -137,6 +170,20 @@ jobs:
           done
 
           echo "🎉 MCP Server is now accessible at https://darkwinterlab.com/mcp/"
+
+      # 실패 시 상세 원인 캡처
+      - name: Print remote npm logs on failure
+        if: failure()
+        run: |
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
+            LOGDIR="$HOME/.npm/_logs"
+            echo "== npm logs =="
+            ls -l "$LOGDIR" || true
+            tail -n +1 -v "$LOGDIR"/* || true
+
+            echo "== pm2 status =="
+            npx pm2 status || true
+          '
 
       # 실패 시 롤백
       - name: Rollback on failure

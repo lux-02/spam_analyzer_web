@@ -12,8 +12,34 @@ git pull origin main
 
 echo "🔨 MCP 서버 빌드..."
 cd mcp-server
-npm install
-npm run build
+
+# npm 로그 폴더 초기화
+LOGDIR="$HOME/.npm/_logs"
+rm -rf "$LOGDIR" || true
+mkdir -p "$LOGDIR"
+
+# 의존성 설치
+if [ -f package-lock.json ]; then
+  npm ci || {
+    echo "❌ npm ci 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+    tail -n +1 -v "$LOGDIR"/* || true
+    exit 1
+  }
+else
+  npm install || {
+    echo "❌ npm install 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+    tail -n +1 -v "$LOGDIR"/* || true
+    exit 1
+  }
+fi
+
+# 빌드
+npm run build || {
+  echo "❌ npm run build 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+  tail -n +1 -v "$LOGDIR"/* || true
+  exit 1
+}
+
 cd $ROOT_DIR
 
 echo "🐳 Docker 컨테이너 재시작..."

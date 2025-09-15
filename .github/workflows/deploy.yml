@@ -61,6 +61,12 @@ jobs:
             if gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
               set -euxo pipefail
               REPO="$HOME/spam_analyzer_web"
+              
+              # npm 로그 폴더 초기화
+              LOGDIR="$HOME/.npm/_logs"
+              rm -rf "$LOGDIR" || true
+              mkdir -p "$LOGDIR"
+              
               if [ ! -d "$REPO/.git" ]; then
                 git clone https://github.com/lux-02/spam_analyzer_web.git "$REPO"
               fi
@@ -70,8 +76,26 @@ jobs:
               git clean -fd
 
               cd mcp-server
-              npm ci --omit=dev || npm install --production
-              npm run build
+              # 의존성 설치 (락파일 있으면 ci, 없으면 install)
+              if [ -f package-lock.json ]; then
+                npm ci --omit=dev || {
+                  echo "❌ npm ci 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+                  tail -n +1 -v "$LOGDIR"/* || true
+                  exit 1
+                }
+              else
+                npm install --production || {
+                  echo "❌ npm install 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+                  tail -n +1 -v "$LOGDIR"/* || true
+                  exit 1
+                }
+              fi
+              
+              npm run build || {
+                echo "❌ npm run build 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
+                tail -n +1 -v "$LOGDIR"/* || true
+                exit 1
+              }
 
               cd ..
               chmod +x deploy-with-mcp.sh
@@ -198,6 +222,20 @@ jobs:
           echo "📍 서비스 URL:"
           echo "- 메인 사이트: https://darkwinterlab.com"
           echo "- MCP API: https://darkwinterlab.com/mcp/"
+
+      # 실패 시 상세 원인 캡처
+      - name: Print remote npm logs on failure
+        if: failure()
+        run: |
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
+            LOGDIR="$HOME/.npm/_logs"
+            echo "== npm logs =="
+            ls -l "$LOGDIR" || true
+            tail -n +1 -v "$LOGDIR"/* || true
+
+            echo "== pm2 status (if available) =="
+            npx pm2 status 2>/dev/null || echo "pm2 not available"
+          '
 
       # 실패 시 진단
       - name: Diagnose on Failure
