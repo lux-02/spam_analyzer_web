@@ -28,56 +28,56 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-    # SSH 키 전파 문제를 해결하는 개선된 방법
-    - name: Setup SSH with retry mechanism
-      run: |
-        echo "🔑 SSH 키 설정 시작..."
-        
-        # SSH 키 설정
-        mkdir -p ~/.ssh
-        echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
-        chmod 600 ~/.ssh/google_compute_engine
-        
-        # 공개 키 생성 (개인 키로부터)
-        ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
-        echo "✅ SSH 키 생성 완료"
-        
-        # OS Login 비활성화 (중요!)
-        echo "🔒 OS Login 비활성화..."
-        gcloud compute project-info add-metadata --metadata enable-oslogin=FALSE
-        
-        # 기존 SSH 키 메타데이터 가져오기
-        echo "📋 기존 SSH 키 확인..."
-        gcloud compute project-info describe --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt 2>/dev/null || touch current_keys.txt
-        
-        # runner 키 제거 (있다면)
-        grep -v "^runner:" current_keys.txt > temp_keys.txt 2>/dev/null || touch temp_keys.txt
-        
-        # 새 키 추가
-        echo "runner:$(cat ~/.ssh/google_compute_engine.pub)" >> temp_keys.txt
-        
-        # 빈 줄 제거 후 메타데이터 업데이트
-        grep -v "^$" temp_keys.txt > final_keys.txt
-        echo "📝 SSH 키 메타데이터 업데이트..."
-        gcloud compute project-info add-metadata --metadata-from-file ssh-keys=final_keys.txt
-        
-        # SSH 설정
-        cat > ~/.ssh/config << EOF
-        Host *
-          StrictHostKeyChecking no
-          UserKnownHostsFile /dev/null
-          ServerAliveInterval 60
-          ServerAliveCountMax 10
-          ConnectTimeout 30
-          IdentitiesOnly yes
-        EOF
-        chmod 600 ~/.ssh/config
-        
-        echo "⏳ SSH 키 전파 대기 (120초)..."
-        sleep 120
-        
-        # 정리
-        rm -f current_keys.txt temp_keys.txt final_keys.txt
+      # SSH 키 전파 문제를 해결하는 개선된 방법
+      - name: Setup SSH with retry mechanism
+        run: |
+          echo "🔑 SSH 키 설정 시작..."
+          
+          # SSH 키 설정
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/google_compute_engine
+          chmod 600 ~/.ssh/google_compute_engine
+          
+          # 공개 키 생성 (개인 키로부터)
+          ssh-keygen -y -f ~/.ssh/google_compute_engine > ~/.ssh/google_compute_engine.pub
+          echo "✅ SSH 키 생성 완료"
+          
+          # OS Login 비활성화 (중요!)
+          echo "🔒 OS Login 비활성화..."
+          gcloud compute project-info add-metadata --metadata enable-oslogin=FALSE
+          
+          # 기존 SSH 키 메타데이터 가져오기
+          echo "📋 기존 SSH 키 확인..."
+          gcloud compute project-info describe --format="value(commonInstanceMetadata.items[key=ssh-keys].value)" > current_keys.txt 2>/dev/null || touch current_keys.txt
+          
+          # runner 키 제거 (있다면)
+          grep -v "^runner:" current_keys.txt > temp_keys.txt 2>/dev/null || touch temp_keys.txt
+          
+          # 새 키 추가
+          echo "runner:$(cat ~/.ssh/google_compute_engine.pub)" >> temp_keys.txt
+          
+          # 빈 줄 제거 후 메타데이터 업데이트
+          grep -v "^$" temp_keys.txt > final_keys.txt
+          echo "📝 SSH 키 메타데이터 업데이트..."
+          gcloud compute project-info add-metadata --metadata-from-file ssh-keys=final_keys.txt
+          
+          # SSH 설정
+          cat > ~/.ssh/config << EOF
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            ServerAliveInterval 60
+            ServerAliveCountMax 10
+            ConnectTimeout 30
+            IdentitiesOnly yes
+          EOF
+          chmod 600 ~/.ssh/config
+          
+          echo "⏳ SSH 키 전파 대기 (120초)..."
+          sleep 120
+          
+          # 정리
+          rm -f current_keys.txt temp_keys.txt final_keys.txt
 
       # 대안 1: Git pull을 통한 코드 동기화 (가장 안전)
       - name: Deploy via Git pull (Method 1)
