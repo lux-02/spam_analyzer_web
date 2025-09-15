@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # GCP에서 MCP 서버 포함 배포 스크립트
+set -euo pipefail
 
 echo "🚀 MCP 서버 포함 배포 시작..."
 
@@ -21,24 +22,40 @@ mkdir -p "$LOGDIR"
 # 의존성 설치
 if [ -f package-lock.json ]; then
   npm ci || {
-    echo "❌ npm ci 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
-    tail -n +1 -v "$LOGDIR"/* || true
-    exit 1
+    echo "❌ npm ci 실패. 로그 출력:"; ls -l "$LOGDIR" || true;
+    tail -n +1 -v "$LOGDIR"/* 2>/dev/null || true;
+    exit 1;
   }
 else
   npm install || {
-    echo "❌ npm install 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
-    tail -n +1 -v "$LOGDIR"/* || true
-    exit 1
+    echo "❌ npm install 실패. 로그 출력:"; ls -l "$LOGDIR" || true;
+    tail -n +1 -v "$LOGDIR"/* 2>/dev/null || true;
+    exit 1;
   }
 fi
 
 # 빌드
 npm run build || {
-  echo "❌ npm run build 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
-  tail -n +1 -v "$LOGDIR"/* || true
-  exit 1
+  echo "❌ npm run build 실패. 로그 출력:"; ls -l "$LOGDIR" || true;
+  tail -n +1 -v "$LOGDIR"/* 2>/dev/null || true;
+  exit 1;
 }
+
+# 로컬 pm2 보장 및 MCP 서버 재시작
+if ! npm ls pm2 --depth=0 >/dev/null 2>&1; then
+  npm i pm2 --save
+fi
+
+ENTRY=""
+[ -f ./start-http-server.js ] && ENTRY=./start-http-server.js
+[ -z "$ENTRY" ] && [ -f ./dist/index.js ] && ENTRY=./dist/index.js
+[ -z "$ENTRY" ] && { echo "❌ 엔트리 파일 미발견"; exit 1; }
+
+npx pm2 delete mcp-server 2>/dev/null || true
+npx pm2 start "$ENTRY" --name mcp-server
+npx pm2 save
+sleep 5
+curl -f http://localhost:3001/health
 
 cd $ROOT_DIR
 

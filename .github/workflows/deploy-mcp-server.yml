@@ -79,8 +79,8 @@ jobs:
       # 서버 재시작 및 설정 (npx pm2, show logs on fail)
       - name: Deploy and restart server (npx pm2, show logs on fail)
         run: |
-          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -vvv -- bash -lc '
-            set -euxo pipefail
+          gcloud --verbosity=debug compute ssh "${GCP_INSTANCE}" --zone="$GCP_ZONE" -- -- bash -lc '
+            set -euo pipefail
 
             REPO_DIR="$HOME/spam_analyzer_web/mcp-server"
             mkdir -p "$REPO_DIR"
@@ -93,40 +93,36 @@ jobs:
 
             # npm 로그 폴더 초기화
             LOGDIR="$HOME/.npm/_logs"
-            rm -rf "$LOGDIR" || true
             mkdir -p "$LOGDIR"
+            rm -rf "$LOGDIR"/* 2>/dev/null || true
 
             # 의존성 설치 (락파일 있으면 ci, 없으면 install)
             if [ -f package-lock.json ]; then
               npm ci --omit=dev || {
-                echo "❌ npm ci 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
-                tail -n +1 -v "$LOGDIR"/* || true
-                exit 1
+                echo "❌ npm ci 실패. 로그 출력:"; ls -l "$LOGDIR" || true;
+                tail -n +1 -v "$LOGDIR"/* 2>/dev/null || true;
+                exit 1;
               }
             else
               npm install --production || {
-                echo "❌ npm install 실패. 최신 로그 출력:"; ls -l "$LOGDIR" || true
-                tail -n +1 -v "$LOGDIR"/* || true
-                exit 1
+                echo "❌ npm install 실패. 로그 출력:"; ls -l "$LOGDIR" || true;
+                tail -n +1 -v "$LOGDIR"/* 2>/dev/null || true;
+                exit 1;
               }
             fi
 
             # 엔트리 자동 탐지
-            if [ -f "./start-http-server.js" ]; then
-              ENTRY="./start-http-server.js"
-            elif [ -f "./dist/index.js" ]; then
-              ENTRY="./dist/index.js"
-            else
-              echo "❌ 엔트리 파일 없음 (start-http-server.js 또는 dist/index.js)"; ls -la
-              exit 1
-            fi
+            ENTRY=""
+            [ -f "./start-http-server.js" ] && ENTRY="./start-http-server.js"
+            [ -z "$ENTRY" ] && [ -f "./dist/index.js" ] && ENTRY="./dist/index.js"
+            [ -z "$ENTRY" ] && { echo "❌ 엔트리 파일 없음 (start-http-server.js 또는 dist/index.js)"; ls -la; exit 1; }
 
             # 글로벌 설치 대신 로컬 pm2 사용
             if ! npm ls pm2 --depth=0 >/dev/null 2>&1; then
               npm i pm2 --save || {
-                echo "❌ pm2 설치 실패. 로그:"; ls -l "$LOGDIR" || true
-                tail -n +1 -v "$LOGDIR"/* || true
-                exit 1
+                echo "❌ pm2 설치 실패. 로그:"; ls -l "$LOGDIR" || true;
+                tail -n +1 -v "$LOGDIR"/* 2>/dev/null || true;
+                exit 1;
               }
             fi
 
