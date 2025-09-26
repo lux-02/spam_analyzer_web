@@ -1,12 +1,6 @@
 {
   "version": 2,
   "name": "spam-analyzer-web",
-  "builds": [
-    {
-      "src": "next.config.mjs",
-      "use": "@vercel/next"
-    }
-  ],
   "functions": {
     "pages/api/*.js": {
       "maxDuration": 60
