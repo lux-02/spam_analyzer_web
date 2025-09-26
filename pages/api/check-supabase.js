@@ -3,6 +3,8 @@ import {
   getSupabaseClient,
 } from "../../utils/supabase";
 
+const supabaseUrl = process.env.SUPABASE_URL || null;
+
 export default async function handler(req, res) {
   try {
     const client = getSupabaseClient();
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
       message: finalConnectionCheck
         ? "Supabase 연결이 정상적으로 작동 중입니다."
         : "Supabase 연결에 문제가 있습니다.",
-      url: "https://crecmfkspiblkztvicqr.supabase.co",
+      url: supabaseUrl,
     });
   } catch (error) {
     console.error("Supabase 연결 확인 중 오류 발생:", error);
