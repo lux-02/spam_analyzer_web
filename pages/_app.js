@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "leaflet/dist/leaflet.css";
 import { ThemeProvider } from "../context/ThemeContext";
 import { useEffect } from "react";
 import { suppressConsoleErrors } from "../utils/errorHandler";

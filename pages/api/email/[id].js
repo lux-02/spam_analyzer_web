@@ -1,8 +1,7 @@
-import { getResult, initializeStorage } from "../analyze-email";
+import { getResult } from "../analyze-email";
 
 export default async function handler(req, res) {
-  // 스토리지 초기화 확인
-  await initializeStorage();
+  // Supabase는 별도 초기화 불필요
 
   const { id } = req.query;
 
@@ -19,11 +18,11 @@ export default async function handler(req, res) {
     console.log(`메모리에서 분석 결과 발견 (ID: ${id})`);
     result = global.tempAnalysisResults[id];
   } else {
-    // MongoDB에서 분석 결과 조회
+    // Supabase에서 분석 결과 조회
     try {
       result = await getResult(id);
     } catch (dbError) {
-      console.warn(`MongoDB 조회 오류 (ID: ${id}):`, dbError);
+      console.warn(`Supabase 조회 오류 (ID: ${id}):`, dbError);
     }
   }
 

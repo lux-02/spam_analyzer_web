@@ -29,22 +29,21 @@ export default function Footer() {
 
   return (
     <footer className="py-6 text-center text-sm text-text-light dark:text-gray-400">
-      <p className="mb-2">
-        © 2025 NAVER MAIL ANALYZER - 이메일 분석 데이터는 안전한 데이터베이스에
-        저장됩니다.
-      </p>
-
       <div className={styles.logoContainer}>
         <Image
+          className={styles.footerLogoImage}
           src={isDarkMode ? "/dwl_logo_w.svg" : "/dwl_logo_b.svg"}
           alt="DarkWinterLab_logo"
           width={100}
           height={100}
           priority
-          className={styles.footerLogoImage}
           onClick={() => router.push("/")}
         />
       </div>
+      <p className="mt-4 mb-2">
+        © 2025 NAVER MAIL ANALYZER - 이메일 분석 데이터는 안전한 데이터베이스에
+        저장됩니다.
+      </p>
     </footer>
   );
 }

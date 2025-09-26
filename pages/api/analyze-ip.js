@@ -42,34 +42,9 @@ export default async function handler(req, res) {
       geoipData.flag && geoipData.flag.emoji ? geoipData.flag.emoji : "🏳️";
 
     // 포트 스캔 정보 요청 (Flask 서버)
+    // 포트 스캔 기능은 Vercel 서버리스 환경에서 지원되지 않으므로 비활성화
     let portScanInfo = null;
-    const flaskBaseUrl =
-      process.env.FLASK_SERVER_URL || "http://localhost:5001";
-
-    try {
-      // 포트 스캔 실행
-      console.log(`포트 스캔 시작: ${ip}`);
-      const portScanResponse = await axios.post(
-        `${flaskBaseUrl}/scan`,
-        { ip, port_range: "21-25,80,443,8080-8090", timeout: 10 }, // nmap 타임아웃 10초로 증가
-        { timeout: 150000 } // 2.5분 타임아웃
-      );
-
-      if (portScanResponse.data && portScanResponse.data.success) {
-        console.log(
-          `포트 스캔 성공: ${ip}, 소요시간: ${portScanResponse.data.scan_time}`
-        );
-        portScanInfo = portScanResponse.data;
-      } else {
-        console.log(`포트 스캔 실패: ${ip}, 응답:`, portScanResponse.data);
-      }
-    } catch (scanError) {
-      console.error("포트 스캔 요청 중 오류 발생:", scanError.message);
-      if (scanError.code === "ECONNABORTED") {
-        console.error("포트 스캔 타임아웃 발생");
-      }
-      // 오류가 발생해도 계속 진행 (포트 스캔 결과는 null)
-    }
+    console.log("포트 스캔 기능은 서버리스 환경에서 비활성화되었습니다.");
 
     // 결과 반환
     return res.status(200).json({

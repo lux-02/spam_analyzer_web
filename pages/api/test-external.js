@@ -8,10 +8,10 @@ import {
   getEmailAttachments,
   analyzeEmailIntent,
 } from "@/utils/emailAnalyzer";
-import { isValidEmailRawData } from "@/utils/validators";
+import { validateEmailRawData } from "@/utils/emailAnalyzer";
 
-// API 키 설정
-const DEFAULT_API_KEY = "dark-winter-lab-api-key";
+// API 키 설정 (환경변수 필수)
+const DEFAULT_API_KEY = process.env.DEFAULT_API_KEY;
 
 // CORS 미들웨어 초기화
 const cors = Cors({

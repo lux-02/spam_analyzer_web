@@ -9,16 +9,18 @@ const EmailBodyContent = ({
   failedDomains = [],
   analyzedTargets = {},
 }) => {
-  const [tab, setTab] = useState("preview");
+  const [tab, setTab] = useState("ai");
 
   if (!emailData) return null;
 
   const {
     body,
+    htmlBody,
     links,
     beacons = [],
     attachments = [],
     llmAnalysis = null,
+    hasHtml = false,
   } = emailData;
 
   // 도메인이 실패 목록에 있는지 확인하는 함수
@@ -26,8 +28,11 @@ const EmailBodyContent = ({
     return failedDomains.includes(domain);
   };
 
+  // HTML 또는 텍스트 내용 준비
+  const displayContent = hasHtml && htmlBody ? htmlBody : body;
+
   // Sanitize HTML for safe rendering
-  const sanitizedHtml = DOMPurify.sanitize(body || "", {
+  const sanitizedHtml = DOMPurify.sanitize(displayContent || "", {
     ADD_ATTR: ["target"],
     ALLOWED_TAGS: [
       "a",
@@ -68,9 +73,79 @@ const EmailBodyContent = ({
     ALLOWED_ATTR: ["href", "src", "alt", "title", "target", "style", "class"],
   });
 
+  // 텍스트 전용 표시를 위한 HTML 생성
+  const textOnlyHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          line-height: 1.6;
+          margin: 20px;
+          background: white;
+          color: #111827;
+          font-size: 14px;
+        }
+        a { 
+          color: #3b82f6; 
+          text-decoration: underline; 
+        }
+        a:hover { 
+          color: #1d4ed8; 
+        }
+        pre { 
+          white-space: pre-wrap; 
+          word-wrap: break-word; 
+          font-family: inherit;
+          margin: 0;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          margin-top: 1em;
+          margin-bottom: 0.5em;
+          color: #1f2937;
+        }
+        p {
+          margin-bottom: 1em;
+        }
+        table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 1em 0;
+        }
+        td, th {
+          border: 1px solid #e5e7eb;
+          padding: 8px;
+          text-align: left;
+        }
+        th {
+          background-color: #f9fafb;
+          font-weight: bold;
+        }
+      </style>
+    </head>
+    <body>
+      ${
+        hasHtml && htmlBody
+          ? sanitizedHtml
+          : `<pre>${body || "(내용 없음)"}</pre>`
+      }
+    </body>
+    </html>
+  `;
+
   // 모든 URL의 도메인 추출
   const domains = links
-    ? [...new Set(links.map((url) => extractDomain(url)))]
+    ? [
+        ...new Set(
+          links.map((link) => {
+            // link가 객체인 경우 url 속성을 사용, 문자열인 경우 그대로 사용
+            const url = typeof link === "object" ? link.url : link;
+            return extractDomain(url);
+          })
+        ),
+      ]
     : [];
 
   // 신뢰도 색상 매핑
@@ -80,15 +155,14 @@ const EmailBodyContent = ({
     Low: "text-red-600 dark:text-red-400",
   };
 
-  // 카테고리 아이콘 매핑
+  // 카테고리 아이콘 매핑 (Gemini AI intent 기반)
   const categoryIcons = {
-    "비밀번호 변경 요청": "🔑",
-    "송장/청구서 위장": "📄",
-    "로그인 시도 알림": "🔐",
-    "이벤트 초대": "📅",
-    "스팸 광고": "📣",
-    "정상 업무 메일": "✉️",
-    기타: "❓",
+    legitimate: "✅",
+    spam: "📣",
+    phishing: "🎣",
+    scam: "⚠️",
+    promotional: "📢",
+    unknown: "❓",
   };
 
   // 위험도 점수에 따른 색상 선택
@@ -96,6 +170,93 @@ const EmailBodyContent = ({
     if (score <= -10) return "text-red-600 dark:text-red-400";
     if (score < 0) return "text-yellow-600 dark:text-yellow-400";
     return "text-green-600 dark:text-green-400";
+  };
+
+  // Intent 한글 표시명
+  const getIntentDisplayName = (intent) => {
+    const names = {
+      legitimate: "정상 메일",
+      spam: "스팸 메일",
+      phishing: "피싱 메일",
+      scam: "사기 메일",
+      promotional: "홍보 메일",
+      unknown: "분석 필요",
+    };
+    return names[intent] || intent;
+  };
+
+  // Intent 색상
+  const getIntentColor = (intent) => {
+    const colors = {
+      legitimate:
+        "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100",
+      spam: "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100",
+      phishing: "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100",
+      scam: "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100",
+      promotional:
+        "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100",
+      unknown: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100",
+    };
+    return colors[intent] || colors.unknown;
+  };
+
+  // Intent 배지
+  const getIntentBadge = (intent) => {
+    const badges = {
+      legitimate: "안전",
+      spam: "스팸",
+      phishing: "위험",
+      scam: "사기",
+      promotional: "홍보",
+      unknown: "분석중",
+    };
+    return badges[intent] || "알 수 없음";
+  };
+
+  // 분석 이유 포맷팅
+  const formatAnalysisReasoning = (reasoning) => {
+    if (!reasoning || reasoning === "분석 이유를 찾을 수 없습니다.") {
+      return (
+        <div className="text-center py-4 text-gray-500">
+          <span className="text-2xl block mb-2">🤔</span>
+          <p>분석 이유를 찾을 수 없습니다.</p>
+        </div>
+      );
+    }
+
+    // JSON 형태인지 확인하고 파싱 시도
+    if (reasoning.includes('"intent"') && reasoning.includes('"confidence"')) {
+      return (
+        <div className="text-center py-4 text-gray-500">
+          <span className="text-2xl block mb-2">⚠️</span>
+          <p>분석 데이터를 처리 중입니다...</p>
+          <details className="mt-2 text-left">
+            <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
+              원시 데이터 보기
+            </summary>
+            <pre className="mt-2 text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto">
+              {reasoning}
+            </pre>
+          </details>
+        </div>
+      );
+    }
+
+    // 일반 텍스트 처리
+    const sentences = reasoning
+      .split(/[.!?]\s+/)
+      .filter((s) => s.trim().length > 0);
+
+    return (
+      <div className="space-y-2">
+        {sentences.map((sentence, index) => (
+          <p key={index} className="flex items-start">
+            <span className="text-blue-500 mr-2 mt-1 text-xs">•</span>
+            <span className="flex-1">{sentence.trim()}.</span>
+          </p>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -161,10 +322,11 @@ const EmailBodyContent = ({
 
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
             <iframe
-              srcDoc={sanitizedHtml}
+              srcDoc={textOnlyHtml}
               title="Email Content Preview"
-              className="w-full min-h-[300px] border-0"
-              sandbox="allow-same-origin"
+              className="w-full min-h-[300px] border-0 rounded"
+              sandbox="allow-same-origin allow-scripts"
+              style={{ background: "white" }}
             />
           </div>
         </div>
@@ -203,15 +365,37 @@ const EmailBodyContent = ({
             모든 URL ({links?.length || 0}개)
           </h3>
           <ul className="space-y-2">
-            {links?.map((url, idx) => {
+            {links?.map((link, idx) => {
+              // link가 객체인 경우와 문자열인 경우 모두 처리
+              const url = typeof link === "object" ? link.url : link;
+              const text = typeof link === "object" ? link.text : link;
+              const suspicious =
+                typeof link === "object" ? link.suspicious : false;
               const domain = extractDomain(url);
+
               return (
                 <li
                   key={`url-${idx}`}
-                  className="p-2 bg-gray-50 dark:bg-gray-700 rounded break-all"
+                  className={`p-2 rounded break-all ${
+                    suspicious
+                      ? "bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800"
+                      : "bg-gray-50 dark:bg-gray-700"
+                  }`}
                 >
                   <div className="flex items-center justify-between flex-wrap">
-                    <span className="mr-2 truncate max-w-[70%]">{url}</span>
+                    <div className="mr-2 truncate max-w-[70%]">
+                      <div className="text-sm font-medium">{url}</div>
+                      {text && text !== url && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          링크 텍스트: {text}
+                        </div>
+                      )}
+                      {suspicious && (
+                        <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                          ⚠️ 의심스러운 링크
+                        </div>
+                      )}
+                    </div>
                     {onCheckUrl && (
                       <VirusTotalButton
                         target={url}
@@ -389,59 +573,87 @@ const EmailBodyContent = ({
                 <div className="flex justify-between items-start">
                   <div className="flex items-center">
                     <span className="text-3xl mr-3">
-                      {categoryIcons[llmAnalysis.category] || "📋"}
+                      {categoryIcons[llmAnalysis.intent] || "📋"}
                     </span>
                     <div>
-                      <h3 className="font-bold text-lg">
-                        {llmAnalysis.category}
+                      <h3 className="font-bold text-lg mb-1">
+                        {getIntentDisplayName(llmAnalysis.intent) || "분석 중"}
                       </h3>
-                      <p
-                        className={`${
-                          confidenceColors[llmAnalysis.confidence] ||
-                          "text-gray-500"
-                        } font-semibold`}
-                      >
-                        신뢰도: {llmAnalysis.confidence}
-                      </p>
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`text-xs px-2 py-1 rounded ${
+                            llmAnalysis.success
+                              ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+                              : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+                          }`}
+                        >
+                          {llmAnalysis.success
+                            ? "✅ 분석 완료"
+                            : "⚠️ 분석 실패"}
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div
-                    className={`font-bold text-xl ${getRiskScoreColor(
-                      llmAnalysis.riskScore
+                    className={`px-3 py-2 rounded-lg font-bold ${getIntentColor(
+                      llmAnalysis.intent
                     )}`}
                   >
-                    {llmAnalysis.riskScore > 0 ? "+" : ""}
-                    {llmAnalysis.riskScore}
+                    {getIntentBadge(llmAnalysis.intent)}
                   </div>
                 </div>
               </div>
 
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-                <h3 className="font-semibold mb-2">분석 이유</h3>
-                <p className="text-gray-700 dark:text-gray-300">
-                  {llmAnalysis.reason}
-                </p>
+                <h3 className="font-semibold mb-3 flex items-center">
+                  <span className="mr-2">🔍</span>
+                  AI 분석 결과
+                </h3>
+                <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {formatAnalysisReasoning(llmAnalysis.reasoning)}
+                </div>
               </div>
+
+              {llmAnalysis.redFlags && llmAnalysis.redFlags.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-900 p-4 rounded border border-red-200 dark:border-red-800">
+                  <h3 className="font-semibold mb-2 text-red-800 dark:text-red-200">
+                    ⚠️ 위험 요소
+                  </h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {llmAnalysis.redFlags.map((flag, index) => (
+                      <li
+                        key={index}
+                        className="text-red-700 dark:text-red-300 text-sm"
+                      >
+                        {flag}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {llmAnalysis.recommendation && (
+                <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded border border-blue-200 dark:border-blue-800">
+                  <h3 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">
+                    💡 권장사항
+                  </h3>
+                  <p className="text-blue-700 dark:text-blue-300 text-sm whitespace-pre-wrap">
+                    {llmAnalysis.recommendation}
+                  </p>
+                </div>
+              )}
 
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
                 <h3 className="font-semibold mb-2">AI 모델 정보</h3>
                 <div className="flex items-center">
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 rounded mr-2">
-                    {llmAnalysis.model_used || "Gemini API"}
+                    Gemini 2.5 Flash Lite
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {new Date(emailData.timestamp).toLocaleString()}
                   </span>
                 </div>
               </div>
-
-              {llmAnalysis.analysisMessage && (
-                <div className="p-4 border border-blue-200 bg-blue-50 dark:bg-blue-900 dark:border-blue-800 rounded">
-                  <p className="text-blue-700 dark:text-blue-300 italic">
-                    "{llmAnalysis.analysisMessage}"
-                  </p>
-                </div>
-              )}
             </div>
           )}
         </div>

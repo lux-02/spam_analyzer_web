@@ -154,11 +154,7 @@ const RiskScoreChecklist = ({ emailData }) => {
   const calculatedScore = emailData.risk.score;
 
   const riskLevel =
-    calculatedScore <= 40
-      ? "danger"
-      : calculatedScore <= 70
-      ? "suspicious"
-      : "safe";
+    calculatedScore >= 70 ? "high" : calculatedScore >= 40 ? "medium" : "low";
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
@@ -189,10 +185,10 @@ const RiskScoreChecklist = ({ emailData }) => {
         <div className="w-full bg-gray-200 rounded-full h-4">
           <div
             className={`h-4 rounded-full ${
-              riskLevel === "safe"
+              riskLevel === "low"
                 ? "bg-green-500"
-                : riskLevel === "suspicious"
-                ? "bg-yellow-500"
+                : riskLevel === "medium"
+                ? "bg-orange-500"
                 : "bg-red-500"
             }`}
             style={{ width: `${calculatedScore}%` }}
@@ -245,9 +241,9 @@ const RiskScoreChecklist = ({ emailData }) => {
             <div className="flex justify-between mt-1 text-sm">
               <span>위험 등급:</span>
               <span>
-                {riskLevel === "safe" && "🟢 정상"}
-                {riskLevel === "suspicious" && "🟠 의심"}
-                {riskLevel === "danger" && "🔴 위험"}
+                {riskLevel === "low" && "🟢 정상"}
+                {riskLevel === "medium" && "🟠 의심"}
+                {riskLevel === "high" && "🔴 위험"}
               </span>
             </div>
           </div>
@@ -260,13 +256,13 @@ const RiskScoreChecklist = ({ emailData }) => {
         </p>
         <ul className="mt-1 pl-5 list-disc">
           <li>
-            <strong>0-40점:</strong> 매우 위험 - 심각한 피싱/스미싱 가능성
+            <strong>0-39점:</strong> 안전함 - 위험 요소 없거나 미미함
           </li>
           <li>
-            <strong>41-70점:</strong> 의심스러움 - 일부 위험 요소 있음
+            <strong>40-69점:</strong> 의심스러움 - 일부 위험 요소 있음
           </li>
           <li>
-            <strong>71-100점:</strong> 안전함 - 위험 요소 없거나 미미함
+            <strong>70-100점:</strong> 매우 위험 - 심각한 피싱/스미싱 가능성
           </li>
         </ul>
       </div>

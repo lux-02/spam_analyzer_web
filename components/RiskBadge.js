@@ -4,18 +4,21 @@ const RiskBadge = ({ level, score }) => {
   let badgeColor, icon, label;
 
   switch (level) {
+    case "high":
     case "danger":
-      badgeColor = "bg-danger";
+      badgeColor = "bg-red-500";
       icon = "🔴";
       label = "위험";
       break;
+    case "medium":
     case "suspicious":
-      badgeColor = "bg-warning";
+      badgeColor = "bg-orange-500";
       icon = "🟠";
       label = "의심";
       break;
+    case "low":
     case "safe":
-      badgeColor = "bg-safe";
+      badgeColor = "bg-green-500";
       icon = "🟢";
       label = "정상";
       break;

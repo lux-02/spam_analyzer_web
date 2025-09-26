@@ -3,17 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start -H 0.0.0.0",
+    "start": "next start",
     "lint": "next lint",
-    "check-db": "node scripts/db-check.js"
+    "check-db": "node scripts/db-check.js",
+    "vercel-deploy": "vercel --prod"
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.16.0",
-    "@huggingface/inference": "^3.13.1",
+    "@google/genai": "^0.3.1",
     "@react-three/drei": "^9.88.0",
     "@react-three/fiber": "^8.13.7",
+    "@supabase/supabase-js": "^2.39.0",
     "axios": "^1.6.8",
     "buffer": "^6.0.3",
     "cheerio": "^1.0.0-rc.12",
@@ -23,15 +24,11 @@
     "js-base64": "^3.7.7",
     "leaflet": "^1.9.4",
     "maath": "^0.10.4",
-    "mongodb": "^6.16.0",
-    "mongoose": "^8.14.3",
-    "multer": "^2.0.0",
     "next": "15.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
     "three": "^0.154.0",
-    "transformers": "^3.1.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

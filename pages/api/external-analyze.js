@@ -8,15 +8,14 @@ import {
   getEmailAttachments,
   analyzeEmailIntent,
 } from "@/utils/emailAnalyzer";
-import { isValidEmailRawData } from "@/utils/validators";
-import { connectToDatabase, AnalysisResult } from "@/utils/db";
+import { validateEmailRawData } from "@/utils/emailAnalyzer";
+import { saveEmailAnalysis } from "@/utils/supabase";
 
 // API 키 설정 (환경 변수에서 가져오거나 기본값 사용)
 const API_KEYS = (process.env.EXTERNAL_API_KEYS || "")
   .split(",")
   .filter(Boolean);
-const DEFAULT_API_KEY =
-  process.env.DEFAULT_API_KEY || "dark-winter-lab-api-key";
+const DEFAULT_API_KEY = process.env.DEFAULT_API_KEY;
 
 // CORS 미들웨어 초기화
 const cors = Cors({
@@ -39,26 +38,18 @@ function runMiddleware(req, res, fn) {
 // 결과 저장 함수
 async function saveResult(id, data) {
   try {
-    // MongoDB에 저장
-    await connectToDatabase();
+    // Supabase에 저장
+    const success = await saveEmailAnalysis(id, data);
 
-    // id로 기존 데이터 조회
-    const existingResult = await AnalysisResult.findOne({ id });
-
-    if (existingResult) {
-      // 기존 데이터 업데이트
-      await AnalysisResult.updateOne({ id }, data);
-      console.log(`기존 분석 결과 업데이트 완료 (ID: ${id})`);
+    if (success) {
+      console.log(`외부 API 분석 결과 저장 완료: ${id}`);
     } else {
-      // 새 데이터 저장
-      const newResult = new AnalysisResult(data);
-      await newResult.save();
-      console.log(`새 분석 결과 저장 완료 (ID: ${id})`);
+      console.error("Supabase 저장 실패");
     }
 
     return true;
   } catch (error) {
-    console.error("MongoDB 결과 저장 오류:", error);
+    console.error("Supabase 결과 저장 오류:", error);
     return false;
   }
 }

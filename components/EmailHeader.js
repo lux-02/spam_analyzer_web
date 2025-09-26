@@ -20,7 +20,7 @@ const EmailHeader = ({ emailData }) => {
       </h1>
 
       <div className="flex flex-wrap items-center gap-4 mb-4">
-        <RiskBadge level={risk?.level} score={risk?.score} />
+        <RiskBadge level={risk?.riskLevel || risk?.level} score={risk?.score} />
 
         {country && countryCode && (
           <div className="flex items-center">
@@ -44,18 +44,10 @@ const EmailHeader = ({ emailData }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <p className="text-gray-600 dark:text-gray-400 font-medium">
-            보낸 사람:
+            보낸 사람
           </p>
           <p className="font-semibold break-words">
             {from || "(발신자 정보 없음)"}
-          </p>
-        </div>
-        <div>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">
-            받는 사람:
-          </p>
-          <p className="font-semibold break-words">
-            {to || "(수신자 정보 없음)"}
           </p>
         </div>
       </div>

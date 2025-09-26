@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "spam-analyzer-remote": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://darkwinterlab.com/mcp/jsonrpc"]
-    }
-  }
-}

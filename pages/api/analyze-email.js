@@ -9,8 +9,9 @@ import {
   checkBeaconImages,
   getEmailAttachments,
   analyzeEmailIntent,
+  validateEmailRawData,
 } from "../../utils/emailAnalyzer";
-import { connectToDatabase, AnalysisResult } from "../../utils/db";
+import { saveEmailAnalysis, getEmailAnalysis } from "../../utils/supabase";
 
 // CORS 미들웨어 초기화
 const cors = Cors({
@@ -34,9 +35,9 @@ function runMiddleware(req, res, fn) {
 const DATA_DIR = path.join(process.cwd(), "data");
 const RESULTS_FILE = path.join(DATA_DIR, "analysis_results.json");
 
-// 저장소 초기화 함수 (MongoDB 연결 포함)
-export async function initializeStorage() {
-  // 파일 시스템 초기화 (레거시 지원)
+// 파일 시스템 백업 저장소 초기화 함수
+export function ensureFileSystemBackup() {
+  // 파일 시스템 초기화 (백업용)
   if (!global.storageInitialized) {
     try {
       // 디렉토리가 없다면 생성
@@ -51,48 +52,34 @@ export async function initializeStorage() {
 
       // 전역 변수로 초기화 완료 표시
       global.storageInitialized = true;
-      console.log("파일 시스템 저장소 초기화 완료");
+      console.log("파일 시스템 백업 저장소 초기화 완료");
     } catch (error) {
-      console.error("파일 시스템 저장소 초기화 오류:", error);
+      console.error("파일 시스템 백업 저장소 초기화 오류:", error);
     }
-  }
-
-  // MongoDB 연결
-  try {
-    await connectToDatabase();
-    console.log("MongoDB 저장소 초기화 완료");
-  } catch (error) {
-    console.error("MongoDB 저장소 초기화 오류:", error);
   }
 }
 
-// 결과 저장 함수 (MongoDB 사용)
+// 결과 저장 함수 (Supabase 사용)
 async function saveResult(id, data) {
   try {
-    // MongoDB에 저장
-    await connectToDatabase();
+    // Supabase에 저장 시도
+    const success = await saveEmailAnalysis(id, data);
 
-    // id로 기존 데이터 조회
-    const existingResult = await AnalysisResult.findOne({ id });
-
-    if (existingResult) {
-      // 기존 데이터 업데이트
-      await AnalysisResult.updateOne({ id }, data);
-      console.log(`기존 분석 결과 업데이트 완료 (ID: ${id})`);
+    if (success) {
+      console.log(`Supabase에 분석 결과 저장 완료 (ID: ${id})`);
+      return true;
     } else {
-      // 새 데이터 저장
-      const newResult = new AnalysisResult(data);
-      await newResult.save();
-      console.log(`새 분석 결과 저장 완료 (ID: ${id})`);
+      console.warn("Supabase 저장 실패 - 파일 시스템 저장으로 전환");
+      throw new Error("Supabase 저장 실패");
     }
-
-    return true;
   } catch (error) {
-    console.error("MongoDB 결과 저장 오류:", error);
+    console.warn("Supabase 결과 저장 오류:", error.message);
 
-    // MongoDB 저장 실패 시 파일 시스템 백업 사용
+    // Supabase 저장 실패 시 파일 시스템 백업 사용
     try {
       console.log("파일 시스템 백업 저장 시도 중...");
+      ensureFileSystemBackup(); // 백업 저장소 확인
+
       // 기존 데이터 불러오기
       const rawData = fs.readFileSync(RESULTS_FILE, "utf8");
       const allResults = JSON.parse(rawData || "{}");
@@ -120,18 +107,17 @@ export async function getResult(id) {
   try {
     if (!id) return null;
 
-    // MongoDB에서 조회
-    await connectToDatabase();
-    const result = await AnalysisResult.findOne({ id });
+    // Supabase에서 조회
+    const result = await getEmailAnalysis(id);
 
-    // MongoDB에 존재하면 반환
+    // Supabase에 존재하면 반환
     if (result) {
-      console.log(`MongoDB에서 분석 결과 조회 성공 (ID: ${id})`);
-      return result.toObject();
+      console.log(`Supabase에서 분석 결과 조회 성공 (ID: ${id})`);
+      return result;
     }
 
-    // MongoDB에 없으면 파일 시스템에서 조회 (기존 데이터 마이그레이션 고려)
-    console.log(`MongoDB에 결과 없음, 파일 시스템 확인 중 (ID: ${id})`);
+    // Supabase에 없으면 파일 시스템에서 조회 (기존 데이터 마이그레이션 고려)
+    console.log(`Supabase에 결과 없음, 파일 시스템 확인 중 (ID: ${id})`);
     if (!fs.existsSync(RESULTS_FILE)) {
       return null;
     }
@@ -144,11 +130,11 @@ export async function getResult(id) {
     if (fileResult) {
       console.log(`파일 시스템에서 분석 결과 조회 성공 (ID: ${id})`);
 
-      // 파일에서 찾은 결과를 MongoDB로 마이그레이션
+      // 파일에서 찾은 결과를 Supabase로 마이그레이션
       try {
         await saveResult(id, fileResult);
         console.log(
-          `파일 시스템 결과를 MongoDB로 마이그레이션 완료 (ID: ${id})`
+          `파일 시스템 결과를 Supabase로 마이그레이션 완료 (ID: ${id})`
         );
       } catch (migrationError) {
         console.error(`마이그레이션 실패 (ID: ${id}):`, migrationError);
@@ -159,7 +145,7 @@ export async function getResult(id) {
   } catch (error) {
     console.error("결과 조회 오류:", error);
 
-    // MongoDB 조회 실패 시 파일 시스템 시도
+    // Supabase 조회 실패 시 파일 시스템 시도
     try {
       if (!fs.existsSync(RESULTS_FILE)) {
         return null;
@@ -180,8 +166,8 @@ export default async function handler(req, res) {
   // CORS 미들웨어 실행
   await runMiddleware(req, res, cors);
 
-  // API 호출 전 스토리지 초기화 확인
-  await initializeStorage();
+  // 파일 시스템 백업 저장소 초기화
+  ensureFileSystemBackup();
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
@@ -288,12 +274,62 @@ export default async function handler(req, res) {
       rawData: rawData,
     };
 
-    // 결과 저장 (MongoDB)
-    const saveSuccess = await saveResult(analysisId, finalResult);
-    if (saveSuccess) {
-      console.log(`분석 결과 저장 완료 (ID: ${analysisId})`);
-    } else {
-      console.error(`분석 결과 저장 실패 (ID: ${analysisId})`);
+    // 결과 저장 (MongoDB) - 연결 실패 시에도 계속 진행
+    try {
+      const saveSuccess = await saveResult(analysisId, finalResult);
+      if (saveSuccess) {
+        console.log(`분석 결과 저장 완료 (ID: ${analysisId})`);
+      } else {
+        console.warn(
+          `분석 결과 저장 실패 (ID: ${analysisId}) - 로컬 저장소 사용`
+        );
+      }
+    } catch (saveError) {
+      console.warn(`MongoDB 저장 오류 - 분석은 계속 진행:`, saveError.message);
+    }
+
+    // 세션 쿠키에 접근 허용 ID 저장/갱신
+    try {
+      const rawCookie = req.headers.cookie || "";
+      const cookies = Object.fromEntries(
+        rawCookie
+          .split(";")
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .map((c) => {
+            const eq = c.indexOf("=");
+            return [
+              decodeURIComponent(c.slice(0, eq)),
+              decodeURIComponent(c.slice(eq + 1)),
+            ];
+          })
+      );
+
+      let ids = [];
+      if (cookies.analysis_ids) {
+        try {
+          ids = JSON.parse(cookies.analysis_ids);
+          if (!Array.isArray(ids)) ids = [];
+        } catch (_) {
+          ids = [];
+        }
+      }
+      // 중복 없이 추가
+      if (!ids.includes(analysisId)) ids.push(analysisId);
+
+      const cookieValue = encodeURIComponent(JSON.stringify(ids));
+      const isProd = process.env.NODE_ENV === "production";
+      const cookieParts = [
+        `analysis_ids=${cookieValue}`,
+        "Path=/",
+        "HttpOnly",
+        "SameSite=Lax",
+      ];
+      if (isProd) cookieParts.push("Secure");
+
+      res.setHeader("Set-Cookie", cookieParts.join("; "));
+    } catch (cookieErr) {
+      console.warn("세션 쿠키 설정 실패:", cookieErr);
     }
 
     // 결과 반환
@@ -312,52 +348,7 @@ export default async function handler(req, res) {
   }
 }
 
-// 이메일 원문 데이터 유효성 검증 함수
-function validateEmailRawData(rawData) {
-  // 필수 이메일 헤더 필드 중 최소 2개 이상 존재하는지 확인
-  const requiredHeaders = [
-    "From:",
-    "To:",
-    "Subject:",
-    "Date:",
-    "Received:",
-    "Message-ID:",
-  ];
-  const foundHeaders = requiredHeaders.filter((header) =>
-    rawData.includes(header)
-  );
-
-  // 최소 길이 확인 (메일 원문은 보통 수백 바이트 이상)
-  const minLength = 200;
-
-  // 이메일 본문 구분자가 있는지 확인
-  const hasBodySeparator = rawData.includes("\n\n");
-
-  // 유효성 결과
-  if (foundHeaders.length < 2) {
-    return { valid: false, reason: "이메일 헤더 정보가 부족합니다." };
-  }
-
-  if (rawData.length <= minLength) {
-    return { valid: false, reason: "메일 원문 데이터가 너무 짧습니다." };
-  }
-
-  if (!hasBodySeparator) {
-    return { valid: false, reason: "이메일 형식이 올바르지 않습니다." };
-  }
-
-  // 헤더 분석을 시험적으로 수행해서 파싱 가능한지 확인
-  try {
-    const headerAnalysisResult = analyzeEmailHeader(rawData);
-    if (Object.keys(headerAnalysisResult).length < 3) {
-      return { valid: false, reason: "이메일 헤더를 파싱할 수 없습니다." };
-    }
-  } catch (e) {
-    return { valid: false, reason: "원문 데이터 파싱 중 오류가 발생했습니다." };
-  }
-
-  return { valid: true };
-}
+// 중복 함수 제거됨 - emailAnalyzer.js에서 import된 validateEmailRawData 사용
 
 // 서버 사이드에서 사용할 분석 결과 조회 함수
 export async function getServerSideResult(id) {

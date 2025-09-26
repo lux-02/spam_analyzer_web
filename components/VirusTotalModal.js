@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import PortScanResults from "./PortScanResults";
+// PortScanResults 컴포넌트는 서버리스 환경에서 제거됨
 
 export default function VirusTotalModal({
   isOpen,
@@ -12,9 +12,10 @@ export default function VirusTotalModal({
   const [loadingGraph, setLoadingGraph] = useState(false);
   const [graphError, setGraphError] = useState(null);
   const [graphData, setGraphData] = useState(null);
-  const [loadingPortScan, setLoadingPortScan] = useState(false);
-  const [portScanData, setPortScanData] = useState(null);
-  const [portScanError, setPortScanError] = useState(null);
+  // 세부 탐지 결과 표시 개수 토글 상태
+  const [showAllMalicious, setShowAllMalicious] = useState(false);
+  const [showAllSuspicious, setShowAllSuspicious] = useState(false);
+  const [showAllOthers, setShowAllOthers] = useState(false);
 
   // IP 주소가 변경되면 데이터 초기화
   useEffect(() => {
@@ -22,13 +23,6 @@ export default function VirusTotalModal({
     if (ipAddress) {
       setGraphData(null);
       setGraphError(null);
-      setPortScanData(null);
-      setPortScanError(null);
-
-      // 결과에 portScanInfo가 있으면 설정
-      if (results.portScanInfo) {
-        setPortScanData(results.portScanInfo);
-      }
     }
   }, [results?.ip, results?.ip_address, results?.portScanInfo]);
 
@@ -38,9 +32,6 @@ export default function VirusTotalModal({
       setGraphData(null);
       setGraphError(null);
       setLoadingGraph(false);
-      setPortScanData(null);
-      setPortScanError(null);
-      setLoadingPortScan(false);
     }
   }, [isOpen]);
 
@@ -82,59 +73,11 @@ export default function VirusTotalModal({
     }
   };
 
-  // 포트 스캔 요청 함수
-  const requestPortScan = async () => {
-    // IP 주소만 처리 가능
-    const ipAddress = results?.ip || results?.ip_address;
-    if (!results || !ipAddress) {
-      setPortScanError("IP 주소에 대해서만 포트 스캔을 수행할 수 있습니다.");
-      return;
-    }
-
-    setLoadingPortScan(true);
-    setPortScanError(null);
-
-    try {
-      console.log("포트 스캔 요청:", ipAddress);
-
-      // Flask 서버로 직접 요청 또는 Next.js API 경로를 통한 요청
-      const response = await axios.get(`/api/analyze-ip?ip=${ipAddress}`, {
-        timeout: 180000, // 3분 타임아웃
-      });
-
-      if (response.data && response.data.portScanInfo) {
-        console.log("포트 스캔 성공:", response.data.portScanInfo);
-        setPortScanData(response.data.portScanInfo);
-      } else {
-        setPortScanError("포트 스캔 결과를 가져오지 못했습니다.");
-      }
-    } catch (err) {
-      let errorMessage = "포트 스캔 요청에 실패했습니다.";
-
-      if (err.code === "ECONNABORTED") {
-        errorMessage = "포트 스캔 시간이 초과되었습니다. 다시 시도해주세요.";
-      } else if (err.response?.status === 504) {
-        errorMessage =
-          "포트 스캔 시간이 초과되었습니다. 서버가 응답하지 않습니다.";
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      }
-
-      setPortScanError(errorMessage);
-      console.error("포트 스캔 오류:", err);
-    } finally {
-      setLoadingPortScan(false);
-    }
-  };
-
   // 모달 닫기 처리 함수
   const handleClose = () => {
     setGraphData(null);
     setGraphError(null);
     setLoadingGraph(false);
-    setPortScanData(null);
-    setPortScanError(null);
-    setLoadingPortScan(false);
     onClose();
   };
 
@@ -335,40 +278,117 @@ export default function VirusTotalModal({
                     </span>
                   </div>
                 </div>
+
+                {/* 세부 탐지 결과 */}
+                {results?.analysis_results && (
+                  <div className="mt-4">
+                    <h3 className="font-bold text-lg mb-2">세부 탐지 결과</h3>
+                    {(() => {
+                      const entries = Object.entries(
+                        results.analysis_results
+                      ).map(([engine, r]) => ({
+                        engine,
+                        category: r?.category,
+                        result: r?.result,
+                      }));
+                      const malicious = entries.filter(
+                        (e) => e.category === "malicious"
+                      );
+                      const suspicious = entries.filter(
+                        (e) => e.category === "suspicious"
+                      );
+                      const others = entries.filter(
+                        (e) =>
+                          e.category !== "malicious" &&
+                          e.category !== "suspicious"
+                      );
+
+                      const Section = ({
+                        title,
+                        color,
+                        items,
+                        showAll,
+                        onToggle,
+                      }) => (
+                        <div className="mb-3">
+                          <div
+                            className={`text-sm font-semibold mb-1 ${color}`}
+                          >
+                            {title} ({items.length})
+                          </div>
+                          {items.length === 0 ? (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              항목 없음
+                            </div>
+                          ) : (
+                            <>
+                              <ul className="text-sm space-y-1 max-h-56 overflow-auto pr-1">
+                                {(showAll ? items : items.slice(0, 10)).map(
+                                  (e) => (
+                                    <li
+                                      key={`${e.engine}-${e.result}`}
+                                      className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-2 py-1"
+                                    >
+                                      <span className="font-medium">
+                                        {e.engine}
+                                      </span>
+                                      <span className="text-right text-xs text-gray-600 dark:text-gray-300">
+                                        {e.result || e.category || "-"}
+                                      </span>
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                              {items.length > 10 && (
+                                <button
+                                  onClick={onToggle}
+                                  className="mt-2 text-xs text-blue-600 hover:underline"
+                                >
+                                  {showAll
+                                    ? "접기"
+                                    : `모두 보기 (${items.length - 10}+)`}
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      );
+
+                      return (
+                        <div>
+                          <Section
+                            title="악성으로 탐지한 엔진"
+                            color="text-red-600"
+                            items={malicious}
+                            showAll={showAllMalicious}
+                            onToggle={() =>
+                              setShowAllMalicious(!showAllMalicious)
+                            }
+                          />
+                          <Section
+                            title="의심으로 탐지한 엔진"
+                            color="text-yellow-600"
+                            items={suspicious}
+                            showAll={showAllSuspicious}
+                            onToggle={() =>
+                              setShowAllSuspicious(!showAllSuspicious)
+                            }
+                          />
+                          <Section
+                            title="기타 결과"
+                            color="text-gray-600"
+                            items={others}
+                            showAll={showAllOthers}
+                            onToggle={() => setShowAllOthers(!showAllOthers)}
+                          />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
-              {/* 포트 스캔 섹션 */}
-              {(results.ip || results.ip_address) && (
-                <div className="mb-6">
-                  <h3 className="text-xl font-bold mb-4">
-                    포트 스캔 및 배너그랩
-                  </h3>
-
-                  {!portScanData && !loadingPortScan ? (
-                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-4">
-                      <p className="mb-3">
-                        이 IP 주소의 열린 포트와 서비스 배너 정보를 확인합니다.
-                      </p>
-                      <button
-                        onClick={requestPortScan}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-                      >
-                        포트 스캔 시작
-                      </button>
-                      {portScanError && (
-                        <p className="mt-2 text-red-500 text-sm">
-                          {portScanError}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <PortScanResults
-                      scanResults={portScanData}
-                      isLoading={loadingPortScan}
-                    />
-                  )}
-                </div>
-              )}
+              {/* 포트 스캔 및 배너그랩 섹션 제거됨 */}
             </>
           ) : (
             <div className="p-4 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-lg">

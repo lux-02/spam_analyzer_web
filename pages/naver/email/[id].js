@@ -114,10 +114,33 @@ export default function EmailAnalysisResult() {
         const data = await response.json();
         setEmailData(data);
 
-        // IP 주소 위치 정보 가져오기
-        if (data.ipAddresses && data.ipAddresses.length > 0) {
+        // IP 주소 후보 수집: api가 제공하는 ipAddresses 없을 경우 Received 헤더/전송 IP에서 추출
+        const ipv4Regex =
+          /(?:\b|\()(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\b|\))/g;
+
+        const extractedFromReceived = Array.isArray(data.receivedHeaders)
+          ? data.receivedHeaders.flatMap((h) =>
+              (h.match(ipv4Regex) || []).map((s) => s.replace(/[()]/g, ""))
+            )
+          : [];
+
+        const sessionIp =
+          (data.allHeaders &&
+            (data.allHeaders["x-session-ip"] ||
+              data.allHeaders["x-session-ip"])) ||
+          null;
+
+        const candidates = [
+          ...(Array.isArray(data.ipAddresses) ? data.ipAddresses : []),
+          ...extractedFromReceived,
+          ...(sessionIp ? [sessionIp] : []),
+        ]
+          .filter(Boolean)
+          .filter((v, i, arr) => arr.indexOf(v) === i); // 고유화
+
+        if (candidates.length > 0) {
           const ipLocations = await Promise.all(
-            data.ipAddresses.map(async (ip) => {
+            candidates.map(async (ip) => {
               try {
                 const result = await axios.get(`/api/analyze-ip?ip=${ip}`);
                 return result.data;
@@ -490,7 +513,7 @@ export default function EmailAnalysisResult() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <RiskScoreChecklist emailData={emailData} />
-          <AuthenticationInfo emailData={emailData} />
+          <AuthenticationInfo emailData={emailData} ipLocations={ipLocations} />
         </div>
 
         {ipLocations.length > 0 && (

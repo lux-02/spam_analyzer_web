@@ -22,6 +22,18 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "fonts.gstatic.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "shared-whale.pstatic.net",
+        port: "",
+        pathname: "/**",
+      },
     ],
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
@@ -66,12 +78,12 @@ const nextConfig = {
     };
     return config;
   },
-  // 환경 변수 설정
+  // 환경 변수 설정 (Vercel 배포용)
   env: {
-    MONGODB_URI:
-      process.env.MONGODB_URI || "mongodb://localhost:27017/spam_analyzer",
-    FLASK_SERVER_URL: process.env.FLASK_SERVER_URL || "http://localhost:5001",
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    VIRUSTOTAL_API_KEY: process.env.VIRUSTOTAL_API_KEY,
   },
   // ESLint 설정 - 빌드 시 경고와 오류 무시
   eslint: {
