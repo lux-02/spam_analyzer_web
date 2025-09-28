@@ -8,7 +8,7 @@ import {
   getEmailAttachments,
   analyzeEmailIntent,
 } from "@/utils/emailAnalyzer";
-import { validateEmailRawData } from "@/utils/emailAnalyzer";
+import { isValidEmailRawData } from "@/utils/validators";
 
 // API 키 설정 (환경변수 필수)
 const DEFAULT_API_KEY = process.env.DEFAULT_API_KEY;

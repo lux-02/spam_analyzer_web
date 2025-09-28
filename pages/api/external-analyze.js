@@ -8,7 +8,7 @@ import {
   getEmailAttachments,
   analyzeEmailIntent,
 } from "@/utils/emailAnalyzer";
-import { validateEmailRawData } from "@/utils/emailAnalyzer";
+import { isValidEmailRawData } from "@/utils/validators";
 import { saveEmailAnalysis } from "@/utils/supabase";
 
 // API 키 설정 (환경 변수에서 가져오거나 기본값 사용)
@@ -196,7 +196,7 @@ export default async function handler(req, res) {
 
     // 응답에 분석 결과 ID와 결과 페이지 URL 포함
     const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "https://darkwinterlab.com";
+      process.env.NEXT_PUBLIC_BASE_URL || "https://naver.darkwinterlab.com";
     const resultUrl = `${baseUrl}/naver/email/${id}`;
 
     return res.status(200).json({
