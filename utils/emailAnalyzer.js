@@ -2,12 +2,8 @@
  * 이메일 분석 유틸리티 함수들
  */
 
-import { GoogleGenAI } from "@google/genai";
-
-// Gemini AI 초기화
-const genAI = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 
 /**
  * RFC 2047 인코딩된 헤더 디코딩
@@ -600,105 +596,130 @@ export function getEmailAttachments(rawData) {
   return attachments;
 }
 
+function normalizeIntent(intent) {
+  const normalizedIntent = String(intent || "").toLowerCase().trim();
+  const allowedIntents = [
+    "legitimate",
+    "spam",
+    "phishing",
+    "scam",
+    "promotional",
+  ];
+  return allowedIntents.includes(normalizedIntent) ? normalizedIntent : "unknown";
+}
+
+function normalizeConfidence(confidence) {
+  const value = Number(confidence);
+  if (!Number.isFinite(value)) return 0.5;
+  return Math.max(0, Math.min(1, value));
+}
+
+function parseJsonResponse(text) {
+  if (!text || typeof text !== "string") return null;
+
+  let cleanText = text.trim();
+  cleanText = cleanText.replace(/^```json\s*\n?/i, "");
+  cleanText = cleanText.replace(/\n?\s*```\s*$/i, "");
+
+  try {
+    return JSON.parse(cleanText);
+  } catch (_) {
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
 /**
- * Gemini AI를 사용한 이메일 의도 분석
+ * OpenAI API를 사용한 이메일 의도 분석
  * @param {string} emailContent - 이메일 내용
  * @returns {Object} 의도 분석 결과
  */
 export async function analyzeEmailIntent(emailContent) {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn("Gemini API 키가 설정되지 않음. 기본 분석 사용.");
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn("OPENAI_API_KEY가 설정되지 않음. 기본 분석 사용.");
       return {
         success: true,
         intent: "unknown",
+        category: "unknown",
         confidence: 0.5,
-        reasoning: "Gemini API 키가 설정되지 않아 기본 분석을 사용합니다.",
+        reasoning: "OpenAI API 키가 설정되지 않아 기본 분석을 사용합니다.",
         redFlags: [],
-        recommendation: "API 키를 설정하면 더 정확한 분석을 받을 수 있습니다.",
+        recommendation: "OPENAI_API_KEY를 설정하면 더 정확한 분석을 받을 수 있습니다.",
       };
     }
 
-    // Gemini 2.5 Flash Lite 모델 사용
-
-    const prompt = `
-다음 이메일의 의도를 분석해주세요. 특히 스팸, 피싱, 사기 등의 악의적인 의도가 있는지 판단해주세요.
-
-이메일 내용:
-${emailContent}
-
-다음 형식으로 응답해주세요:
-{
-  "intent": "legitimate/spam/phishing/scam/promotional",
-  "confidence": 0.85,
-  "reasoning": "분석 근거",
-  "redFlags": ["의심스러운 요소들"],
-  "recommendation": "사용자에게 권장사항"
-}
-`;
-
-    const result = await genAI.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: prompt,
+    const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;
+    const response = await fetch(OPENAI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              '너는 이메일 보안 분석가다. 반드시 JSON 객체만 반환해라. 필드: intent, confidence, reasoning, redFlags, recommendation. intent는 legitimate|spam|phishing|scam|promotional 중 하나만 사용한다.',
+          },
+          {
+            role: "user",
+            content: `다음 이메일의 의도를 분석해줘. 특히 스팸, 피싱, 사기 가능성을 중점적으로 판단해줘.\n\n이메일 내용:\n${emailContent}`,
+          },
+        ],
+      }),
     });
-    const text = result.text;
 
-    try {
-      // JSON 코드 블록 제거 (```json ... ``` 형태)
-      let cleanText = text.trim();
-
-      // 코드 블록 패턴 제거
-      cleanText = cleanText.replace(/^```json\s*\n?/i, "");
-      cleanText = cleanText.replace(/\n?\s*```\s*$/i, "");
-
-      // 추가적인 정리
-      cleanText = cleanText.trim();
-
-      console.log("Gemini AI 원본 응답:", text);
-      console.log("정리된 JSON:", cleanText);
-
-      // JSON 파싱
-      const analysisResult = JSON.parse(cleanText);
-
-      return {
-        success: true,
-        ...analysisResult,
-      };
-    } catch (parseError) {
-      console.warn("JSON 파싱 실패:", parseError);
-      console.log("파싱 실패한 텍스트:", text);
-
-      // JSON 파싱 실패 시 텍스트에서 정보 추출 시도
-      try {
-        const intentMatch = text.match(/"intent":\s*"([^"]+)"/i);
-        const confidenceMatch = text.match(/"confidence":\s*([0-9.]+)/i);
-        const reasoningMatch = text.match(/"reasoning":\s*"([^"]+)"/i);
-
-        return {
-          success: true,
-          intent: intentMatch ? intentMatch[1] : "unknown",
-          confidence: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
-          reasoning: reasoningMatch ? reasoningMatch[1] : text,
-          redFlags: [],
-          recommendation:
-            "AI 응답 파싱에 실패했습니다. 수동으로 이메일을 검토해주세요.",
-        };
-      } catch (fallbackError) {
-        return {
-          success: false,
-          intent: "unknown",
-          confidence: 0.5,
-          reasoning: text,
-          redFlags: [],
-          recommendation: "수동으로 이메일을 검토해주세요.",
-        };
-      }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI API 오류 (${response.status}): ${errorText}`);
     }
+
+    const data = await response.json();
+    const text = data?.choices?.[0]?.message?.content || "";
+    const parsed = parseJsonResponse(text);
+
+    if (!parsed) {
+      throw new Error("OpenAI 응답 JSON 파싱 실패");
+    }
+
+    const intent = normalizeIntent(parsed.intent);
+    const confidence = normalizeConfidence(parsed.confidence);
+    const redFlags = Array.isArray(parsed.redFlags)
+      ? parsed.redFlags.filter((item) => typeof item === "string")
+      : [];
+
+    return {
+      success: true,
+      intent,
+      category: intent,
+      confidence,
+      reasoning:
+        typeof parsed.reasoning === "string" && parsed.reasoning.trim()
+          ? parsed.reasoning
+          : "분석 근거를 생성하지 못했습니다.",
+      redFlags,
+      recommendation:
+        typeof parsed.recommendation === "string" && parsed.recommendation.trim()
+          ? parsed.recommendation
+          : "의심스러운 요소가 있으면 링크 클릭 및 첨부파일 실행을 피하세요.",
+    };
   } catch (error) {
-    console.error("Gemini AI 분석 오류:", error);
+    console.error("OpenAI 분석 오류:", error);
     return {
       success: true,
       intent: "unknown",
+      category: "unknown",
       confidence: 0.3,
       reasoning: "AI 분석에 실패했습니다. 기본 규칙 기반 분석을 사용합니다.",
       redFlags: [],

@@ -189,7 +189,7 @@ export default function PrivacyPolicy() {
 
                 <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mt-3 space-y-3">
                   <div>
-                    <p className="font-semibold">🤖 Google Gemini API</p>
+                    <p className="font-semibold">🤖 OpenAI API</p>
                     <ul className="list-disc ml-6 mt-1 text-sm">
                       <li><strong>제공 정보:</strong> 이메일 본문 텍스트</li>
                       <li><strong>목적:</strong> AI 기반 이메일 의도 분류 (스팸/피싱 여부 판단)</li>
@@ -232,7 +232,7 @@ export default function PrivacyPolicy() {
 
                 <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mt-3 space-y-3">
                   <div>
-                    <p className="font-semibold">🤖 Google Gemini API</p>
+                    <p className="font-semibold">🤖 OpenAI API</p>
                     <ul className="list-disc ml-6 mt-1 text-sm">
                       <li><strong>Information Shared:</strong> Email body text only</li>
                       <li><strong>Purpose:</strong> AI-based email intent classification (spam/phishing detection)</li>
@@ -360,7 +360,7 @@ export default function PrivacyPolicy() {
                 <ul className="list-disc ml-6 mt-2 space-y-2">
                   <li><strong>Essential Cookies:</strong>
                     <ul className="list-circle ml-6 mt-1 text-sm">
-                      <li><code>analysis_ids</code>: Cookie tracking user's analysis history</li>
+                      <li><code>analysis_ids</code>: Cookie tracking user&apos;s analysis history</li>
                       <li>Validity: 90 days</li>
                       <li>Purpose: Ensure users can only access their own email analysis results</li>
                     </ul>
@@ -420,7 +420,7 @@ export default function PrivacyPolicy() {
                   <ul className="list-disc ml-6 mt-2 text-sm space-y-1">
                     <li>Privacy Infringement Report Center: <a href="https://privacy.kisa.or.kr" className="text-primary underline" target="_blank" rel="noopener noreferrer">privacy.kisa.or.kr</a> / Call 118</li>
                     <li>Personal Information Dispute Mediation Committee: <a href="https://www.kopico.go.kr" className="text-primary underline" target="_blank" rel="noopener noreferrer">www.kopico.go.kr</a> / 1833-6972</li>
-                    <li>Supreme Prosecutors' Office Cybercrime Investigation Unit: <a href="https://www.spo.go.kr" className="text-primary underline" target="_blank" rel="noopener noreferrer">www.spo.go.kr</a> / Call 1301</li>
+                    <li>Supreme Prosecutors&apos; Office Cybercrime Investigation Unit: <a href="https://www.spo.go.kr" className="text-primary underline" target="_blank" rel="noopener noreferrer">www.spo.go.kr</a> / Call 1301</li>
                     <li>National Police Agency Cyber Safety Bureau: <a href="https://cyberbureau.police.go.kr" className="text-primary underline" target="_blank" rel="noopener noreferrer">cyberbureau.police.go.kr</a> / Call 182</li>
                   </ul>
                 </div>
@@ -483,7 +483,7 @@ export default function PrivacyPolicy() {
                 <p className="mb-2 font-semibold">⚠️ Important Service Usage Notice</p>
                 <ul className="list-disc ml-6 mt-2 space-y-1 text-sm">
                   <li>This service is provided for <strong>educational and security research purposes</strong></li>
-                  <li>Analyzing others' emails without authorization is illegal; users must have legitimate authority over the emails being analyzed</li>
+                  <li>Analyzing others&apos; emails without authorization is illegal; users must have legitimate authority over the emails being analyzed</li>
                   <li>Analysis results from this service are for reference only and cannot be used as legal evidence</li>
                   <li>The service provider does not guarantee the accuracy of analysis results and is not responsible for consequences of user decisions</li>
                   <li>Please refrain from analyzing emails containing sensitive personal information</li>
