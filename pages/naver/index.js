@@ -2,11 +2,25 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import { Orbitron, Rajdhani } from "next/font/google";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import Link from "next/link";
 import Footer from "@/components/ui/Footer";
 import { isValidEmailRawData } from "@/utils/validators";
 import { motion, useReducedMotion } from "framer-motion";
+import styles from "@/styles/LandingConsole.module.css";
+
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-orbitron",
+});
+
+const rajdhani = Rajdhani({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-rajdhani",
+});
 
 export default function Home() {
   const [rawData, setRawData] = useState("");
@@ -115,11 +129,11 @@ export default function Home() {
     const validation = isValidEmailRawData(rawData);
     if (!validation.isValid) {
       return (
-        <div className="text-red-500 text-sm mt-1">{validation.reason}</div>
+        <div className={styles.invalidHint}>{validation.reason}</div>
       );
     }
     return (
-      <div className="text-green-500 text-sm mt-1">
+      <div className={styles.validHint}>
         올바른 이메일 원문 형식입니다.
       </div>
     );
@@ -515,7 +529,10 @@ export default function Home() {
   const handleClearRawData = () => setRawData("");
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-text dark:text-white">
+    <div
+      className={`min-h-screen bg-white dark:bg-gray-900 text-text dark:text-white ${styles.landingPage} ${orbitron.variable} ${rajdhani.variable}`}
+    >
+      <div className={styles.gridBackdrop} aria-hidden="true" />
       <Head>
         <title>NAVER MAIL ANALYZER | 스팸·피싱 이메일 즉시 분석</title>
         <meta
@@ -540,12 +557,12 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="container mx-auto px-4 py-8">
-        <header className="mb-10">
+      <div className={`container mx-auto px-4 py-8 ${styles.contentWrap}`}>
+        <header className={styles.headerBar}>
           <div className="flex items-center justify-between gap-3">
             <Link
               href="/naver"
-              className="text-lg font-bold tracking-tight text-heading dark:text-white"
+              className={styles.brandLink}
             >
               NAVER MAIL ANALYZER
             </Link>
@@ -560,7 +577,7 @@ export default function Home() {
                     key={link.href}
                     href={link.href}
                     onClick={handleNavLinkClick}
-                    className="rounded-full px-3 py-1 transition-colors duration-200 hover:bg-primary hover:text-white dark:hover:bg-primary-dark"
+                    className={`rounded-full px-3 py-1 transition-colors duration-200 ${styles.navLink}`}
                   >
                     {link.label}
                   </a>
@@ -584,7 +601,7 @@ export default function Home() {
                 onClick={() => setIsMobileNavOpen((prev) => !prev)}
                 aria-label={isMobileNavOpen ? "메뉴 닫기" : "메뉴 열기"}
                 aria-expanded={isMobileNavOpen}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-primary ${styles.mobileMenuButton}`}
               >
                 {isMobileNavOpen ? (
                   <svg
@@ -620,7 +637,9 @@ export default function Home() {
           </div>
 
           {isMobileNavOpen && (
-            <div className="mt-4 space-y-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-custom dark:border-gray-700 dark:bg-box dark:shadow-custom-dark md:hidden">
+            <div
+              className={`mt-4 space-y-4 rounded-2xl p-4 md:hidden ${styles.mobileMenu}`}
+            >
               <nav
                 className="flex flex-col gap-2"
                 aria-label="모바일 주요 섹션 바로가기"
@@ -630,7 +649,7 @@ export default function Home() {
                     key={link.href}
                     href={link.href}
                     onClick={handleNavLinkClick}
-                    className="rounded-lg px-3 py-2 text-sm font-medium text-heading transition-colors duration-200 hover:bg-primary/10 dark:text-gray-100 dark:hover:bg-primary/20"
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ${styles.navLink}`}
                   >
                     {link.label}
                   </a>
@@ -655,80 +674,88 @@ export default function Home() {
           {...getRevealMotion(0)}
           className="mb-14 space-y-8"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 via-primary/5 to-transparent p-8 shadow-custom dark:from-indigo-400/10 dark:via-primary/10 dark:shadow-custom-dark md:p-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary dark:bg-white/10">
-              네이버 메일 보안 어시스턴트 BETA
-            </div>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight text-heading dark:text-white md:text-5xl">
-              의심 메일, 1분 안에 위험도를 확인하세요
-            </h1>
-            <p className="mt-3 text-base text-text-light md:text-lg">
-              링크·첨부·발신자 인증 결과를 종합해 클릭 전에 피싱 위험을
-              차단하세요.
-            </p>
-            <ul className="mt-6 space-y-3 text-left">
-              {heroHighlights.map((highlight) => (
-                <li
-                  key={highlight}
-                  className="flex items-start gap-3 text-sm text-text dark:text-gray-200 md:text-base"
+          <div className={styles.heroShell}>
+            <div className={styles.heroGrid}>
+              <div className={styles.heroContent}>
+                <div className={styles.heroBadge}>
+                  네이버 메일 보안 어시스턴트 BETA
+                </div>
+                <h1
+                  className={`mt-4 text-4xl font-extrabold leading-tight md:text-5xl ${styles.heroTitle}`}
                 >
-                  <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-primary" />
-                  <span>{highlight}</span>
-                </li>
-              ))}
-            </ul>
-            <div
-              id="preview"
-              className="mt-8 rounded-2xl border border-white/40 bg-white/90 p-6 text-left shadow-lg backdrop-blur dark:border-gray-700/60 dark:bg-gray-900/85 dark:text-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  분석 요약 미리보기
-                </span>
-                <span className="text-xs text-text-light dark:text-gray-300">
-                  실제 보고서 형식
-                </span>
-              </div>
-              <div className="mt-4 rounded-xl border border-red-200 bg-gradient-to-br from-red-500/10 via-orange-500/10 to-transparent p-4 text-text dark:border-red-500/40 dark:from-red-500/25 dark:via-orange-500/20 dark:to-transparent dark:bg-gray-900/60 dark:text-gray-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">
-                  위험 지수
+                  의심 메일, 1분 안에
+                  <br className="hidden md:block" />
+                  위험도를 확인하세요
+                </h1>
+                <p className={`mt-4 text-base md:text-lg ${styles.heroLead}`}>
+                  링크·첨부·발신자 인증 결과를 종합해 클릭 전에 피싱 위험을
+                  차단하세요. 메인 랜딩도 이제 분석 콘솔과 같은 위협 인텔리전스
+                  톤으로 동작합니다.
                 </p>
-                <p className="mt-1 text-3xl font-bold text-heading dark:text-white">
-                  82% · 고위험
-                </p>
-                <p className="mt-2 text-sm text-text-light dark:text-gray-300">
-                  SPF 실패, 위장 Reply-To, 고위험 링크 2건 탐지
-                </p>
-              </div>
-              <ul className="mt-5 space-y-3 text-sm text-text dark:text-gray-200">
-                {previewHighlights.map((item) => (
-                  <li
-                    key={item}
-                    className="flex gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/70"
+                <ul className="mt-6 space-y-3 text-left">
+                  {heroHighlights.map((highlight) => (
+                    <li
+                      key={highlight}
+                      className={`flex items-start gap-3 text-sm md:text-base ${styles.heroListItem}`}
+                    >
+                      <span
+                        className={`mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full ${styles.heroListDot}`}
+                      />
+                      <span>{highlight}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <a
+                    href="#analyze"
+                    className="btn-primary btn-lg w-full transition-transform hover:-translate-y-0.5 shadow-md hover:shadow-lg"
                   >
-                    <span className="mt-1 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-red-500" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-5 rounded-xl border border-dashed border-indigo-300 p-4 text-xs text-text-light dark:border-indigo-500/40 dark:bg-gray-900/60 dark:text-gray-300">
-                분석 결과는 위험 근거와 대응 가이드를 포함하며, 복사 한 번으로
-                즉시 검토에 활용할 수 있습니다.
+                    지금 무료로 분석하기
+                  </a>
+                </div>
+              </div>
+
+              <div id="preview" className={styles.heroPreview}>
+                <div className={`flex items-center justify-between text-xs ${styles.previewMeta}`}>
+                  <span className="font-semibold uppercase tracking-wide text-red-500">
+                    분석 요약 미리보기
+                  </span>
+                  <span>실제 보고서 형식</span>
+                </div>
+                <div className={`mt-4 rounded-xl p-4 ${styles.previewDanger}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
+                    위험 지수
+                  </p>
+                  <p className="mt-1 text-3xl font-bold text-white">
+                    82% · 고위험
+                  </p>
+                  <p className="mt-2 text-sm text-text-light">
+                    SPF 실패, 위장 Reply-To, 고위험 링크 2건 탐지
+                  </p>
+                </div>
+                <ul className="mt-5 space-y-3 text-sm">
+                  {previewHighlights.map((item) => (
+                    <li
+                      key={item}
+                      className={`flex gap-3 rounded-lg p-3 ${styles.previewListItem}`}
+                    >
+                      <span className="mt-1 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-red-500" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className={`mt-5 rounded-xl p-4 text-xs ${styles.previewNote}`}>
+                  분석 결과는 위험 근거와 대응 가이드를 포함하며, 복사 한 번으로
+                  즉시 검토에 활용할 수 있습니다.
+                </div>
               </div>
             </div>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <a
-                href="#analyze"
-                className="btn-primary btn-lg w-full transition-transform hover:-translate-y-0.5 shadow-md hover:shadow-lg"
-              >
-                지금 무료로 분석하기
-              </a>
-            </div>
-            <div className="mt-10 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
+
+            <div className={styles.telemetryGrid}>
               {statHighlights.map((stat, index) => (
                 <motion.div
                   key={stat.value}
-                  className="rounded-xl border border-white/40 bg-white/80 p-4 text-sm font-medium text-heading shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  className={styles.telemetryCard}
                   {...getCardHover()}
                   transition={
                     shouldReduceMotion
@@ -741,10 +768,9 @@ export default function Home() {
                         }
                   }
                 >
-                  <div className="text-xl font-bold text-primary dark:text-primary-light">
-                    {stat.value}
-                  </div>
-                  <p className="mt-1 text-xs text-text-light dark:text-gray-300">
+                  <div className={styles.telemetryLabel}>LIVE SIGNAL</div>
+                  <div className={styles.telemetryValue}>{stat.value}</div>
+                  <p className={styles.telemetryDescription}>
                     {stat.description}
                   </p>
                 </motion.div>
@@ -756,19 +782,19 @@ export default function Home() {
         <motion.section
           id="analyze"
           {...getRevealMotion(0.06)}
-          className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-3xl border border-gray-200 bg-gradient-to-br from-primary/5 via-white to-white p-6 shadow-custom focus-within:ring-2 focus-within:ring-primary/20 dark:border-gray-700 dark:from-primary/15 dark:via-gray-900 dark:to-gray-950 dark:shadow-custom-dark md:p-10"
+          className={`relative mx-auto w-full max-w-6xl overflow-hidden p-6 focus-within:ring-2 focus-within:ring-primary/20 md:p-10 ${styles.analyzeShell}`}
         >
           <div
-            className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-primary/20 blur-3xl dark:bg-primary/30"
+            className={styles.analyzeHaloLeft}
             aria-hidden="true"
           />
           <div
-            className="pointer-events-none absolute -right-12 bottom-0 h-44 w-44 rounded-full bg-indigo-400/10 blur-3xl dark:bg-indigo-400/20"
+            className={styles.analyzeHaloRight}
             aria-hidden="true"
           />
           <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              <span className={`inline-flex items-center gap-2 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${styles.analyzeBadge}`}>
                 Step 1 · 지금 원문 붙여넣기
               </span>
               <h2 className="mt-3 text-3xl font-extrabold text-heading dark:text-white md:text-4xl">
@@ -782,15 +808,15 @@ export default function Home() {
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-white">
                   1. 원문 붙여넣기
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 dark:bg-white/10">
+                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${styles.stepMuted}`}>
                   2. AI 분석
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 dark:bg-white/10">
+                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 ${styles.stepMuted}`}>
                   3. 결과 확인
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-xs font-medium text-text-light shadow-sm backdrop-blur dark:bg-gray-800/80 dark:text-gray-300">
+            <div className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium shadow-sm backdrop-blur ${styles.analyzeInfoPill}`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
@@ -806,25 +832,25 @@ export default function Home() {
           <div className="relative mt-10 grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <form onSubmit={handleSubmit} className="space-y-6">
               <motion.div
-                className="group relative overflow-hidden rounded-3xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 via-white to-white p-6 shadow-xl transition-all duration-300 focus-within:border-primary focus-within:shadow-primary/30 dark:from-primary/15 dark:via-gray-900 dark:to-gray-950"
+                className={`group relative overflow-hidden rounded-3xl p-6 transition-all duration-300 focus-within:border-primary focus-within:shadow-primary/30 ${styles.inputCard}`}
                 {...getRevealMotion(0.1, 18)}
                 whileHover={
                   shouldReduceMotion
                     ? undefined
-                    : { scale: 1.003, boxShadow: "0 18px 36px rgba(37, 99, 235, 0.18)" }
+                    : { scale: 1.003, boxShadow: "0 18px 36px rgba(255, 48, 74, 0.16)" }
                 }
               >
                 <div
-                  className="pointer-events-none absolute -top-24 -right-20 h-56 w-56 rounded-full bg-primary/20 blur-3xl dark:bg-primary/30"
+                  className={styles.inputHaloPrimary}
                   aria-hidden="true"
                 />
                 <div
-                  className="pointer-events-none absolute -bottom-12 -left-16 h-40 w-40 rounded-full bg-indigo-300/20 blur-3xl dark:bg-indigo-400/20"
+                  className={styles.inputHaloSecondary}
                   aria-hidden="true"
                 />
                 <div className="relative flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/30">
+                    <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl text-white ${styles.inputTopIcon}`}>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24"
@@ -853,7 +879,7 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-primary shadow-sm backdrop-blur dark:bg-gray-800/70 dark:text-primary-light">
+                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur ${styles.characterBadge}`}>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 20 20"
@@ -867,16 +893,12 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="relative mt-5">
-                  <div
-                    className="pointer-events-none absolute inset-0 rounded-2xl border border-primary/40 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
-                    aria-hidden="true"
-                  />
+                <div className={`mt-5 ${styles.textareaFrame}`}>
                   <textarea
                     id="rawData"
                     value={rawData}
                     onChange={(e) => setRawData(e.target.value)}
-                    className="relative z-[1] h-[320px] w-full rounded-2xl border border-gray-200 bg-white/95 px-5 py-4 font-mono text-sm leading-6 text-text shadow-inner transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-100"
+                    className={`relative z-[1] h-[320px] w-full rounded-2xl px-5 py-4 font-mono text-sm leading-6 transition focus:outline-none ${styles.rawTextarea}`}
                     placeholder="네이버 메일의 '더보기 > 원문 보기'에서 복사한 원문을 그대로 붙여넣어 주세요."
                     aria-describedby="raw-data-helper"
                   />
@@ -904,7 +926,7 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                className="rounded-2xl border border-gray-200/70 bg-white/80 p-4 dark:border-gray-700/70 dark:bg-gray-900/60"
+                className={`rounded-2xl p-4 ${styles.consentCard}`}
                 {...getRevealMotion(0.14, 16)}
               >
                 <div className="flex items-start gap-3">
@@ -948,7 +970,7 @@ export default function Home() {
 
             <div className="space-y-4">
               <motion.div
-                className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70"
+                className={`rounded-2xl p-5 shadow-md backdrop-blur ${styles.sideCard}`}
                 {...getRevealMotion(0.18, 16)}
                 {...getCardHover()}
               >
@@ -969,7 +991,7 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70"
+                className={`rounded-2xl p-5 shadow-md backdrop-blur ${styles.sideCard}`}
                 {...getRevealMotion(0.24, 16)}
                 {...getCardHover()}
               >
@@ -990,7 +1012,7 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70"
+                className={`rounded-2xl p-5 shadow-md backdrop-blur ${styles.sideCard}`}
                 {...getRevealMotion(0.3, 16)}
                 {...getCardHover()}
               >
@@ -1035,7 +1057,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className="mx-auto mt-16 max-w-5xl"
+          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
           id="extensions"
           {...getRevealMotion(0.08)}
         >
@@ -1051,7 +1073,7 @@ export default function Home() {
               href="https://chromewebstore.google.com/detail/egiihcmplomfonhicnabpifjpgkhcimi?utm_source=item-share-cb"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex flex-col items-start gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              className={`flex flex-col items-start gap-3 rounded-xl p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${styles.sideCard}`}
               {...getCardHover()}
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
@@ -1077,7 +1099,7 @@ export default function Home() {
               href="https://store.whale.naver.com/detail/iifpjpbmgopecnfibfnakgobibghhien"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex flex-col items-start gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              className={`flex flex-col items-start gap-3 rounded-xl p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${styles.sideCard}`}
               {...getCardHover()}
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
@@ -1102,7 +1124,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className="mx-auto mt-16 max-w-5xl"
+          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
           id="features"
           {...getRevealMotion(0.1)}
         >
@@ -1131,7 +1153,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className="mx-auto mt-16 max-w-5xl"
+          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
           id="testimonials"
           {...getRevealMotion(0.12)}
         >
@@ -1168,7 +1190,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className="mx-auto mt-16 max-w-5xl"
+          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
           id="comparison"
           {...getRevealMotion(0.14)}
         >
@@ -1179,7 +1201,7 @@ export default function Home() {
             보안 지식이 없어도 누구나 위협 수준을 이해하고 공유할 수 있도록 분석
             결과를 구조화했습니다.
           </p>
-          <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-custom dark:border-gray-700 dark:bg-box dark:shadow-custom-dark">
+          <div className={`mt-6 overflow-hidden rounded-2xl ${styles.sideCard}`}>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800/60">
                 <tr>
@@ -1215,7 +1237,7 @@ export default function Home() {
 
         <motion.section
           id="workflow"
-          className="mx-auto mt-16 max-w-5xl"
+          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
           {...getRevealMotion(0.16)}
         >
           <h3 className="mb-6 text-center text-2xl font-bold text-heading dark:text-white">
@@ -1243,7 +1265,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className="mx-auto mt-16 max-w-4xl"
+          className={`mx-auto mt-16 max-w-4xl ${styles.sectionShell}`}
           id="contact"
           {...getRevealMotion(0.18)}
         >
@@ -1276,7 +1298,7 @@ export default function Home() {
           animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
           transition={shouldReduceMotion ? undefined : { duration: 0.32 }}
         >
-          <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl bg-white/95 p-4 shadow-custom backdrop-blur dark:bg-gray-900/95 dark:shadow-custom-dark sm:flex-row sm:items-center">
+          <div className={`mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl p-4 backdrop-blur sm:flex-row sm:items-center ${styles.floatingCta}`}>
             <div className="flex-1">
               <p className="text-sm font-semibold text-heading dark:text-white">
                 의심 메일 분석을 지금 시작해 보세요
@@ -1293,7 +1315,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setIsFloatingDismissed(true)}
-              className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              className={`ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full transition focus:outline-none focus:ring-2 focus:ring-primary ${styles.floatingClose}`}
               aria-label="배너 닫기"
             >
               <svg
