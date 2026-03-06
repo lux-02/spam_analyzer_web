@@ -13,6 +13,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import EmailHeader from "@/components/EmailHeader";
 import AuthenticationInfo from "@/components/AuthenticationInfo";
 import EmailBodyContent from "@/components/EmailBodyContent";
+import ReceivedPathMap from "@/components/ReceivedPathMap";
 import RiskScoreChecklist from "@/components/RiskScoreChecklist";
 import VirusTotalButton from "@/components/VirusTotalButton";
 import VirusTotalModal from "@/components/VirusTotalModal";
@@ -111,6 +112,34 @@ export default function EmailAnalysisResult() {
   const [resultsCache, setResultsCache] = useState({}); // 결과 캐시 상태 추가
   const [isAnalyzing, setIsAnalyzing] = useState(false); // 분석 중 상태 추가
   const shouldReduceMotion = useReducedMotion();
+  const hasGeoLocations = ipLocations.some(
+    (loc) =>
+      loc &&
+      Number.isFinite(Number(loc.latitude)) &&
+      Number.isFinite(Number(loc.longitude))
+  );
+  const geolocatedCount = ipLocations.filter(
+    (loc) =>
+      loc &&
+      Number.isFinite(Number(loc.latitude)) &&
+      Number.isFinite(Number(loc.longitude))
+  ).length;
+  const uniqueCountryCount = new Set(
+    ipLocations.map((loc) => loc?.country || loc?.countryCode).filter(Boolean)
+  ).size;
+  const uniqueIspCount = new Set(
+    ipLocations.map((loc) => loc?.isp).filter(Boolean)
+  ).size;
+  const geoCoverage = Math.round(
+    (geolocatedCount / Math.max(ipLocations.length, 1)) * 100
+  );
+  const firstHopCountry =
+    ipLocations[0]?.country || ipLocations[0]?.countryCode || "미상";
+  const lastHopCountry =
+    ipLocations[ipLocations.length - 1]?.country ||
+    ipLocations[ipLocations.length - 1]?.countryCode ||
+    "미상";
+  const routeTraceLabel = `${firstHopCountry} → ${lastHopCountry}`;
 
   const getPanelMotion = (delay = 0) =>
     shouldReduceMotion
@@ -682,6 +711,59 @@ export default function EmailAnalysisResult() {
             {...getPanelMotion(0.18)}
           >
             <h2 className="text-xl font-bold mb-4">수신 경로 모니터링</h2>
+            <div className={styles.routeTelemetryGrid}>
+              <div className={styles.routeTelemetryCard}>
+                <span className={styles.routeTelemetryLabel}>NETWORK HOPS</span>
+                <span className={styles.routeTelemetryValue}>{ipLocations.length}</span>
+              </div>
+              <div className={styles.routeTelemetryCard}>
+                <span className={styles.routeTelemetryLabel}>COUNTRY NODES</span>
+                <span className={styles.routeTelemetryValue}>{uniqueCountryCount}</span>
+              </div>
+              <div className={styles.routeTelemetryCard}>
+                <span className={styles.routeTelemetryLabel}>ISP NODES</span>
+                <span className={styles.routeTelemetryValue}>{uniqueIspCount || "-"}</span>
+              </div>
+              <div className={styles.routeTelemetryCard}>
+                <span className={styles.routeTelemetryLabel}>TRACE ROUTE</span>
+                <span className={styles.routeTelemetryValueLong}>{routeTraceLabel}</span>
+              </div>
+            </div>
+
+            <div className={styles.routeSignalWrap}>
+              <div className={styles.routeSignalMeta}>
+                <span>GEO COVERAGE</span>
+                <span>{geoCoverage}%</span>
+              </div>
+              <div className={styles.routeSignalTrack}>
+                <motion.div
+                  className={styles.routeSignalFill}
+                  initial={shouldReduceMotion ? undefined : { width: "0%" }}
+                  animate={shouldReduceMotion ? undefined : { width: `${geoCoverage}%` }}
+                  transition={shouldReduceMotion ? undefined : { duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  style={shouldReduceMotion ? { width: `${geoCoverage}%` } : undefined}
+                />
+              </div>
+            </div>
+
+            {hasGeoLocations && (
+              <motion.div
+                className={styles.routeMapCard}
+                initial={shouldReduceMotion ? undefined : { opacity: 0, y: 10 }}
+                animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                transition={shouldReduceMotion ? undefined : { duration: 0.35, delay: 0.08 }}
+              >
+                <div className={styles.routeMapMeta}>
+                  <span className={styles.routeMapMetaLabel}>GLOBAL ROUTE MAP</span>
+                  <span className={styles.routeMapMetaValue}>
+                    GEO NODES {geolocatedCount}/{ipLocations.length}
+                  </span>
+                </div>
+                <div className={styles.routeMapViewport}>
+                  <ReceivedPathMap ipLocations={ipLocations} />
+                </div>
+              </motion.div>
+            )}
 
             <div className="mt-4 text-sm">
               <h3 className="font-bold mb-2">네트워크 홉:</h3>

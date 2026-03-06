@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
-  Marker,
+  CircleMarker,
   Popup,
   Polyline,
 } from "react-leaflet";
@@ -57,6 +57,8 @@ const LeafletMap = ({ locations }) => {
     <MapContainer
       center={centerPosition}
       zoom={2}
+      minZoom={1}
+      scrollWheelZoom={false}
       style={{ height: "100%", width: "100%" }}
       id={mapId}
       key={mapId}
@@ -69,14 +71,21 @@ const LeafletMap = ({ locations }) => {
       }}
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
       />
 
       {locations.map((loc, idx) => (
-        <Marker
+        <CircleMarker
           key={`marker-${idx}-${loc.ip}`}
-          position={[loc.latitude, loc.longitude]}
+          center={[loc.latitude, loc.longitude]}
+          radius={6}
+          pathOptions={{
+            color: "#8ce4ff",
+            weight: 2,
+            fillColor: "#ffa65a",
+            fillOpacity: 0.95,
+          }}
         >
           <Popup>
             <div>
@@ -95,16 +104,25 @@ const LeafletMap = ({ locations }) => {
               )}
             </div>
           </Popup>
-        </Marker>
+        </CircleMarker>
       ))}
 
       {pathCoordinates.length > 1 && (
-        <Polyline
-          positions={pathCoordinates}
-          color="red"
-          weight={3}
-          opacity={0.7}
-        />
+        <>
+          <Polyline
+            positions={pathCoordinates}
+            color="#ff8d42"
+            weight={3.5}
+            opacity={0.86}
+          />
+          <Polyline
+            positions={pathCoordinates}
+            color="#79e2ff"
+            weight={1.4}
+            opacity={0.9}
+            dashArray="6 8"
+          />
+        </>
       )}
     </MapContainer>
   );
