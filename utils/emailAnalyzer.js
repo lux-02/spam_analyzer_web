@@ -65,41 +65,77 @@ function decodeRFC2047(encodedText) {
  */
 export function analyzeEmailHeader(rawData) {
   const headers = {};
-  const lines = rawData.split("\n");
+  const normalizedRawData = String(rawData || "").replace(/\r\n/g, "\n");
+  const headerPart = normalizedRawData.split(/\n\s*\n/)[0] || "";
+  const headerLines = headerPart.split("\n");
 
-  for (const line of lines) {
-    if (line.trim() === "") break; // 헤더 끝
+  // Folded header(개행 + 공백 접두) 펼치기
+  const unfoldedHeaderLines = [];
+  let currentHeaderLine = "";
+
+  for (const line of headerLines) {
+    if (!line) continue;
 
     if (line.startsWith(" ") || line.startsWith("\t")) {
-      // 이전 헤더의 연속
+      if (currentHeaderLine) {
+        currentHeaderLine += ` ${line.trim()}`;
+      }
       continue;
     }
 
-    const colonIndex = line.indexOf(":");
-    if (colonIndex > 0) {
-      const key = line.substring(0, colonIndex).toLowerCase();
-      let value = line.substring(colonIndex + 1).trim();
+    if (currentHeaderLine) {
+      unfoldedHeaderLines.push(currentHeaderLine);
+    }
+    currentHeaderLine = line;
+  }
 
-      // RFC 2047 인코딩 디코딩
-      value = decodeRFC2047(value);
+  if (currentHeaderLine) {
+    unfoldedHeaderLines.push(currentHeaderLine);
+  }
+
+  for (const line of unfoldedHeaderLines) {
+    const colonIndex = line.indexOf(":");
+    if (colonIndex <= 0) continue;
+
+    const key = line.substring(0, colonIndex).toLowerCase();
+    let value = line.substring(colonIndex + 1).trim();
+
+    // RFC 2047 인코딩 디코딩
+    value = decodeRFC2047(value);
+    if (headers[key] === undefined) {
       headers[key] = value;
+    } else if (Array.isArray(headers[key])) {
+      headers[key].push(value);
+    } else {
+      headers[key] = [headers[key], value];
     }
   }
 
-  // Received 헤더들 분석
-  const receivedHeaders = [];
-  const receivedPattern = /received:/gi;
-  const matches = rawData.match(/received:.*$/gim);
-  if (matches) {
-    receivedHeaders.push(
-      ...matches.map((match) => match.replace(/^received:\s*/i, ""))
-    );
-  }
+  // Received 헤더들 분석 (folded header 포함)
+  const receivedHeaders = unfoldedHeaderLines
+    .filter((line) => /^received:/i.test(line))
+    .map((line) => line.replace(/^received:\s*/i, "").trim());
+
+  const getFirstHeader = (key) => {
+    const header = headers[key];
+    if (Array.isArray(header)) {
+      return header.find((value) => typeof value === "string" && value.trim()) || "";
+    }
+    return typeof header === "string" ? header : "";
+  };
+
+  const getMergedHeader = (key) => {
+    const header = headers[key];
+    if (Array.isArray(header)) {
+      return header.filter((value) => typeof value === "string").join(" ; ");
+    }
+    return typeof header === "string" ? header : "";
+  };
 
   // 발신자 정보 추출
-  const fromHeader = headers["from"] || "";
-  const returnPathHeader = headers["return-path"] || "";
-  const senderHeader = headers["sender"] || "";
+  const fromHeader = getFirstHeader("from");
+  const returnPathHeader = getFirstHeader("return-path");
+  const senderHeader = getFirstHeader("sender");
 
   // SPF, DKIM, DMARC 정보 추출 (여러 헤더에서 확인)
   let spfResult = "none";
@@ -107,7 +143,7 @@ export function analyzeEmailHeader(rawData) {
   let dmarcResult = "none";
 
   // Authentication-Results 헤더에서 추출
-  const authResults = headers["authentication-results"] || "";
+  const authResults = getMergedHeader("authentication-results");
   if (authResults) {
     spfResult = authResults.match(/spf=([^;\\s]+)/i)?.[1] || spfResult;
     dkimResult = authResults.match(/dkim=([^;\\s]+)/i)?.[1] || dkimResult;
@@ -115,7 +151,7 @@ export function analyzeEmailHeader(rawData) {
   }
 
   // Received-SPF 헤더에서 SPF 정보 추출
-  const receivedSpf = headers["received-spf"] || "";
+  const receivedSpf = getMergedHeader("received-spf");
   if (receivedSpf) {
     if (receivedSpf.includes("pass")) spfResult = "pass";
     else if (receivedSpf.includes("fail")) spfResult = "fail";
@@ -129,7 +165,7 @@ export function analyzeEmailHeader(rawData) {
   }
 
   // ARC-Authentication-Results에서 DMARC 확인
-  const arcAuthResults = headers["arc-authentication-results"] || "";
+  const arcAuthResults = getMergedHeader("arc-authentication-results");
   if (arcAuthResults) {
     dmarcResult = arcAuthResults.match(/dmarc=([^;\\s]+)/i)?.[1] || dmarcResult;
   }
@@ -138,17 +174,17 @@ export function analyzeEmailHeader(rawData) {
     from: fromHeader,
     returnPath: returnPathHeader,
     sender: senderHeader,
-    subject: decodeRFC2047(headers["subject"] || ""), // Subject 디코딩
-    date: headers["date"] || "",
+    subject: decodeRFC2047(getFirstHeader("subject")), // Subject 디코딩
+    date: getFirstHeader("date"),
     receivedHeaders,
     spf: spfResult,
     dkim: dkimResult,
     dmarc: dmarcResult,
-    messageId: headers["message-id"] || "",
-    xOriginalSender: headers["x-original-sender"] || "",
+    messageId: getFirstHeader("message-id"),
+    xOriginalSender: getFirstHeader("x-original-sender"),
     allHeaders: {
       ...headers,
-      subject: decodeRFC2047(headers["subject"] || ""), // allHeaders에서도 디코딩된 subject 사용
+      subject: decodeRFC2047(getFirstHeader("subject")), // allHeaders에서도 디코딩된 subject 사용
     },
   };
 }
@@ -686,11 +722,11 @@ export async function analyzeEmailIntent(emailContent) {
       {
         role: "system",
         content:
-          '너는 이메일 보안 분석가다. 반드시 JSON 객체만 반환해라. 필드: intent, confidence, reasoning, redFlags, recommendation. intent는 legitimate|spam|phishing|scam|promotional 중 하나만 사용한다.',
+          '너는 이메일 보안 분석가다. 반드시 JSON 객체만 반환해라. 필드: intent, confidence, reasoning, redFlags, recommendation. intent는 legitimate|spam|phishing|scam|promotional 중 하나만 사용한다. reasoning, redFlags, recommendation은 반드시 한국어(자연스러운 존댓말)로 작성하고 영어 문장을 쓰지 마라.',
       },
       {
         role: "user",
-        content: `다음 이메일의 의도를 분석해줘. 특히 스팸, 피싱, 사기 가능성을 중점적으로 판단해줘.\n\n이메일 내용:\n${emailContent}`,
+        content: `다음 이메일의 의도를 분석해줘. 특히 스팸, 피싱, 사기 가능성을 중점적으로 판단해줘.\n반드시 JSON 객체만 반환하고, intent를 제외한 텍스트 필드(reasoning, redFlags, recommendation)는 한국어로 작성해줘.\n\n이메일 내용:\n${emailContent}`,
       },
     ];
 

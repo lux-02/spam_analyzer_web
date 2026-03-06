@@ -20,16 +20,15 @@ const ReceivedPathMap = ({ ipLocations = [] }) => {
       setMounted(true);
     }
 
+    const mapElement = mapContainerRef.current;
+
     return () => {
       // 언마운트 시 처리
       setMounted(false);
 
       // 맵 컨테이너 요소의 Leaflet ID 제거
-      if (mapContainerRef.current) {
-        const element = mapContainerRef.current;
-        if (element._leaflet_id) {
-          delete element._leaflet_id;
-        }
+      if (mapElement && mapElement._leaflet_id) {
+        delete mapElement._leaflet_id;
       }
     };
   }, []);

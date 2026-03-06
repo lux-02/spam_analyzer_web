@@ -102,46 +102,48 @@ const RiskScoreChecklist = ({ emailData }) => {
     },
   ];
 
-  // LLM 분석 결과가 있으면 위험도 평가 항목에 추가
-  if (emailData.llmAnalysis) {
-    const { category, confidence, riskScore, reason } = emailData.llmAnalysis;
+  // 최신 LLM 스키마(intent/confidence/reasoning) 기반 항목
+  if (emailData.llmAnalysis && emailData.llmAnalysis.intent) {
+    const { intent, confidence, reasoning } = emailData.llmAnalysis;
+    const normalizedConfidence = Math.max(
+      0,
+      Math.min(1, Number.isFinite(Number(confidence)) ? Number(confidence) : 0.5)
+    );
+    const confidenceText = `${Math.round(normalizedConfidence * 100)}%`;
 
-    // 위험한 의도로 분류된 경우만 리스크 체크리스트에 추가
-    const isHighRiskCategory = [
-      "비밀번호 변경 요청",
-      "송장/청구서 위장",
-      "로그인 시도 알림",
-    ].includes(category);
-    const isSpamCategory = category === "스팸 광고";
-    const isNormalCategory = category === "정상 업무 메일";
+    const intentLabel = {
+      legitimate: "정상 메일",
+      promotional: "홍보 메일",
+      spam: "스팸 메일",
+      phishing: "피싱 메일",
+      scam: "사기 메일",
+      unknown: "분석 필요",
+    };
 
-    if (isHighRiskCategory || isSpamCategory || isNormalCategory) {
-      let deductionValue = 0;
-      let isPassed = false;
+    // 체크리스트는 시각적 보조 지표이므로 점수 표시는 방향성만 반영
+    const intentScoreDelta = {
+      legitimate: 5,
+      promotional: 2,
+      spam: -10,
+      phishing: -30,
+      scam: -30,
+      unknown: 0,
+    };
 
-      // API에서 제공하는 riskScore 값을 직접 사용
-      deductionValue = riskScore;
+    const deductionValue = intentScoreDelta[intent] ?? 0;
+    const reasoningSummary =
+      typeof reasoning === "string" && reasoning.trim()
+        ? reasoning
+        : "AI 분석 근거를 생성하지 못했습니다.";
 
-      if (isHighRiskCategory) {
-        isPassed = false;
-      } else if (isSpamCategory) {
-        isPassed = false;
-      } else if (isNormalCategory) {
-        isPassed = true;
-      }
-
-      riskFactors.push({
-        id: "llm_analysis",
-        title: "AI 내용 분석",
-        passed: isPassed,
-        description: `${
-          reason ||
-          `이메일이 ${category}으로 분류되었습니다 (신뢰도: ${confidence})`
-        }`,
-        deduction: deductionValue,
-        bonus: deductionValue > 0,
-      });
-    }
+    riskFactors.push({
+      id: "llm_analysis",
+      title: "AI 내용 분석",
+      passed: deductionValue >= 0,
+      description: `${intentLabel[intent] || intent}으로 분류됨 (신뢰도 ${confidenceText}) - ${reasoningSummary}`,
+      deduction: deductionValue,
+      bonus: deductionValue > 0,
+    });
   }
 
   // 모든 인증 통과 시 가산점
@@ -196,13 +198,6 @@ const RiskScoreChecklist = ({ emailData }) => {
         </div>
         <span className="ml-4 font-bold text-lg">{calculatedScore}</span>
       </div>
-
-      {/* AI 분석 결과 메시지 표시 */}
-      {emailData.llmAnalysis && emailData.llmAnalysis.analysisMessage && (
-        <div className="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded text-indigo-800">
-          🤖 {emailData.llmAnalysis.analysisMessage}
-        </div>
-      )}
 
       {showChecklist && (
         <div className="mt-4 border rounded-lg overflow-hidden">

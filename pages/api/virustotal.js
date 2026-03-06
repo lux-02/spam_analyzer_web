@@ -184,10 +184,11 @@ export default async function handler(req, res) {
 async function analyzeUrl(url, res, originalTarget) {
   try {
     const formattedUrl = url.startsWith("http") ? url : `https://${url}`;
+    const formBody = new URLSearchParams({ url: formattedUrl });
 
     const submitResponse = await axios.post(
       "https://www.virustotal.com/api/v3/urls",
-      { url: formattedUrl },
+      formBody.toString(),
       {
         headers: {
           "x-apikey": process.env.VIRUSTOTAL_API_KEY,

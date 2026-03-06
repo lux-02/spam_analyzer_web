@@ -1,5 +1,4 @@
 import React from "react";
-import ReceivedPathMap from "./ReceivedPathMap";
 
 const getDescription = (type) => {
   switch (type) {
@@ -67,7 +66,7 @@ const AuthStatus = ({ type, status }) => {
   );
 };
 
-const AuthenticationInfo = ({ emailData, ipLocations = [] }) => {
+const AuthenticationInfo = ({ emailData }) => {
   if (!emailData) return null;
 
   const { spf, dkim, dmarc } = emailData;
@@ -136,17 +135,6 @@ const AuthenticationInfo = ({ emailData, ipLocations = [] }) => {
         </div>
       </details>
 
-      {ipLocations && ipLocations.length > 0 && (
-        <div className="mt-6">
-          <h3 className="font-semibold mb-2 flex items-center">
-            <span className="mr-2">🗺️</span>
-            수신 경로 지도
-          </h3>
-          <div className="h-64 w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-            <ReceivedPathMap ipLocations={ipLocations} />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

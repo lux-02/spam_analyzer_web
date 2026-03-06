@@ -105,11 +105,12 @@ export default async function handler(req, res) {
       source: "test-external-api",
     };
 
-    const riskAnalysis = calculateRiskScore({
-      ...analysisData,
-      beacons,
-      llmAnalysis,
-    });
+    const riskAnalysis = calculateRiskScore(
+      { ...headerAnalysis, llmAnalysis },
+      { ...bodyAnalysis, llmAnalysis },
+      attachments,
+      beacons
+    );
 
     const finalResult = {
       ...analysisData,

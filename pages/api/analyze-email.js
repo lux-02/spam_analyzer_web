@@ -103,11 +103,12 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString(),
     };
 
-    const riskAnalysis = calculateRiskScore({
-      ...analysisData,
-      beacons,
-      llmAnalysis,
-    });
+    const riskAnalysis = calculateRiskScore(
+      { ...headerAnalysis, llmAnalysis },
+      { ...bodyAnalysis, llmAnalysis },
+      attachments,
+      beacons
+    );
 
     // 개인정보 보호를 위해 서버 저장 없이 결과를 즉시 반환
     const finalResult = {
