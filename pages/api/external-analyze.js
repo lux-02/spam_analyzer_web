@@ -173,7 +173,7 @@ export default async function handler(req, res) {
       rawData: rawData,
     };
 
-    // 결과 저장 (MongoDB) - 임시로 메모리에 저장
+    // 결과 저장 (Supabase) - 실패 시 임시 메모리 저장
     try {
       const saveSuccess = await saveResult(id, finalResult);
       if (saveSuccess) {
@@ -189,7 +189,7 @@ export default async function handler(req, res) {
         `분석 결과 저장 오류, 메모리에 임시 저장 (ID: ${id}):`,
         saveError
       );
-      // MongoDB 저장 실패 시 메모리에 저장
+      // DB 저장 실패 시 메모리에 저장
       global.tempAnalysisResults = global.tempAnalysisResults || {};
       global.tempAnalysisResults[id] = finalResult;
     }

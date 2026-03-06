@@ -82,7 +82,6 @@ const nextConfig = {
   env: {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     VIRUSTOTAL_API_KEY: process.env.VIRUSTOTAL_API_KEY,
   },
   // ESLint 설정 - 빌드 시 경고와 오류 무시

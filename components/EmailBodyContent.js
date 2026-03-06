@@ -155,7 +155,7 @@ const EmailBodyContent = ({
     Low: "text-red-600 dark:text-red-400",
   };
 
-  // 카테고리 아이콘 매핑 (Gemini AI intent 기반)
+  // 카테고리 아이콘 매핑 (LLM intent 기반)
   const categoryIcons = {
     legitimate: "✅",
     spam: "📣",
@@ -305,7 +305,7 @@ const EmailBodyContent = ({
           <span className="mr-1">AI 분석</span>
           {llmAnalysis && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-              Gemini
+              OpenAI
             </span>
           )}
         </button>
@@ -647,7 +647,7 @@ const EmailBodyContent = ({
                 <h3 className="font-semibold mb-2">AI 모델 정보</h3>
                 <div className="flex items-center">
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 rounded mr-2">
-                    Gemini 2.5 Flash Lite
+                    OpenAI
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {new Date(emailData.timestamp).toLocaleString()}

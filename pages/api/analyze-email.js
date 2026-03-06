@@ -102,7 +102,7 @@ async function saveResult(id, data) {
   }
 }
 
-// 결과 조회 함수 (MongoDB 사용)
+// 결과 조회 함수 (Supabase 우선, 파일 시스템 백업 폴백)
 export async function getResult(id) {
   try {
     if (!id) return null;
@@ -274,7 +274,7 @@ export default async function handler(req, res) {
       rawData: rawData,
     };
 
-    // 결과 저장 (MongoDB) - 연결 실패 시에도 계속 진행
+    // 결과 저장 (Supabase) - 연결 실패 시에도 계속 진행
     try {
       const saveSuccess = await saveResult(analysisId, finalResult);
       if (saveSuccess) {
@@ -285,7 +285,7 @@ export default async function handler(req, res) {
         );
       }
     } catch (saveError) {
-      console.warn(`MongoDB 저장 오류 - 분석은 계속 진행:`, saveError.message);
+      console.warn(`결과 저장 오류 - 분석은 계속 진행:`, saveError.message);
     }
 
     // 세션 쿠키에 접근 허용 ID 저장/갱신
