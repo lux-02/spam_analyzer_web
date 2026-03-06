@@ -635,6 +635,32 @@ function parseJsonResponse(text) {
   }
 }
 
+function shouldSetCustomTemperature(model) {
+  // gpt-5 계열은 기본 temperature(1)만 허용되는 경우가 있어 수동 지정을 피한다.
+  return !String(model || "").toLowerCase().startsWith("gpt-5");
+}
+
+async function requestOpenAIChatCompletion({ model, messages, apiKey, temperature }) {
+  const body = {
+    model,
+    response_format: { type: "json_object" },
+    messages,
+  };
+
+  if (typeof temperature === "number") {
+    body.temperature = temperature;
+  }
+
+  return fetch(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 /**
  * OpenAI API를 사용한 이메일 의도 분석
  * @param {string} emailContent - 이메일 내용
@@ -656,29 +682,55 @@ export async function analyzeEmailIntent(emailContent) {
     }
 
     const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;
-    const response = await fetch(OPENAI_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    const messages = [
+      {
+        role: "system",
+        content:
+          '너는 이메일 보안 분석가다. 반드시 JSON 객체만 반환해라. 필드: intent, confidence, reasoning, redFlags, recommendation. intent는 legitimate|spam|phishing|scam|promotional 중 하나만 사용한다.',
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content:
-              '너는 이메일 보안 분석가다. 반드시 JSON 객체만 반환해라. 필드: intent, confidence, reasoning, redFlags, recommendation. intent는 legitimate|spam|phishing|scam|promotional 중 하나만 사용한다.',
-          },
-          {
-            role: "user",
-            content: `다음 이메일의 의도를 분석해줘. 특히 스팸, 피싱, 사기 가능성을 중점적으로 판단해줘.\n\n이메일 내용:\n${emailContent}`,
-          },
-        ],
-      }),
+      {
+        role: "user",
+        content: `다음 이메일의 의도를 분석해줘. 특히 스팸, 피싱, 사기 가능성을 중점적으로 판단해줘.\n\n이메일 내용:\n${emailContent}`,
+      },
+    ];
+
+    // 모델 호환성 이슈(예: gpt-5 계열 temperature 제한)를 피하기 위해 조건부로만 지정
+    const preferredTemperature = shouldSetCustomTemperature(model) ? 0.2 : undefined;
+
+    let response = await requestOpenAIChatCompletion({
+      model,
+      messages,
+      apiKey: process.env.OPENAI_API_KEY,
+      temperature: preferredTemperature,
     });
+
+    // 혹시 모델 정책이 달라져 temperature 오류가 나면 자동 재시도
+    if (!response.ok && preferredTemperature !== undefined) {
+      const errorText = await response.text();
+      let retryWithoutTemperature = false;
+
+      try {
+        const parsedError = JSON.parse(errorText);
+        retryWithoutTemperature =
+          parsedError?.error?.param === "temperature" ||
+          String(parsedError?.error?.message || "")
+            .toLowerCase()
+            .includes("temperature");
+      } catch (_) {
+        retryWithoutTemperature = errorText.toLowerCase().includes("temperature");
+      }
+
+      if (retryWithoutTemperature) {
+        response = await requestOpenAIChatCompletion({
+          model,
+          messages,
+          apiKey: process.env.OPENAI_API_KEY,
+          temperature: undefined,
+        });
+      } else {
+        throw new Error(`OpenAI API 오류 (${response.status}): ${errorText}`);
+      }
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
