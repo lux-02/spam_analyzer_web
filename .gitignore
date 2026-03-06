@@ -51,6 +51,8 @@ next-env.d.ts
 *.dylib
 *.so
 *.dll
+*.tgz
+*.tar.gz
 
 certificates
 data/
