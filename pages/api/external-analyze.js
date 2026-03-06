@@ -115,11 +115,12 @@ export default async function handler(req, res) {
       source: "external-api",
     };
 
-    const riskAnalysis = calculateRiskScore({
-      ...analysisData,
-      beacons,
-      llmAnalysis,
-    });
+    const riskAnalysis = calculateRiskScore(
+      { ...headerAnalysis, llmAnalysis },
+      { ...bodyAnalysis, llmAnalysis },
+      attachments,
+      beacons
+    );
 
     // 개인정보 보호: 서버 저장 없이 결과 즉시 반환
     const finalResult = {

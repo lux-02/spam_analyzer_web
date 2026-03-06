@@ -148,13 +148,6 @@ const EmailBodyContent = ({
       ]
     : [];
 
-  // 신뢰도 색상 매핑
-  const confidenceColors = {
-    High: "text-green-600 dark:text-green-400",
-    Medium: "text-yellow-600 dark:text-yellow-400",
-    Low: "text-red-600 dark:text-red-400",
-  };
-
   // 카테고리 아이콘 매핑 (LLM intent 기반)
   const categoryIcons = {
     legitimate: "✅",
@@ -163,13 +156,6 @@ const EmailBodyContent = ({
     scam: "⚠️",
     promotional: "📢",
     unknown: "❓",
-  };
-
-  // 위험도 점수에 따른 색상 선택
-  const getRiskScoreColor = (score) => {
-    if (score <= -10) return "text-red-600 dark:text-red-400";
-    if (score < 0) return "text-yellow-600 dark:text-yellow-400";
-    return "text-green-600 dark:text-green-400";
   };
 
   // Intent 한글 표시명
@@ -579,7 +565,7 @@ const EmailBodyContent = ({
                       <h3 className="font-bold text-lg mb-1">
                         {getIntentDisplayName(llmAnalysis.intent) || "분석 중"}
                       </h3>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center flex-wrap gap-2">
                         <div
                           className={`text-xs px-2 py-1 rounded ${
                             llmAnalysis.success
@@ -591,6 +577,11 @@ const EmailBodyContent = ({
                             ? "✅ 분석 완료"
                             : "⚠️ 분석 실패"}
                         </div>
+                        {Number.isFinite(Number(llmAnalysis.confidence)) && (
+                          <div className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                            신뢰도 {Math.round(Number(llmAnalysis.confidence) * 100)}%
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import axios from "axios";
 import {
   countryCodeToFlag,
-  isValidIpAddress,
   isValidUrl,
   isAnalyzableTarget,
 } from "@/utils/emailAnalyzer";
@@ -129,32 +128,43 @@ export default function EmailAnalysisResult() {
   }, []);
 
   // 실패한 도메인을 로컬 스토리지에 저장하는 함수
-  const saveFailedDomain = (domain) => {
+  const saveFailedDomain = useCallback((domain) => {
     if (typeof window === "undefined" || !domain) return;
 
-    const newFailedDomains = [...failedDomains, domain];
-    setFailedDomains(newFailedDomains);
-    localStorage.setItem(FAILED_DOMAINS_KEY, JSON.stringify(newFailedDomains));
-  };
+    setFailedDomains((prev) => {
+      if (prev.includes(domain)) return prev;
+      const next = [...prev, domain];
+      localStorage.setItem(FAILED_DOMAINS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   // 결과를 캐시에 저장하는 함수
-  const saveResultToCache = (target, result) => {
+  const saveResultToCache = useCallback((target, result) => {
     if (typeof window === "undefined" || !target) return;
 
-    const newCache = { ...resultsCache, [target]: result };
-    setResultsCache(newCache);
-    localStorage.setItem(VT_RESULTS_CACHE_KEY, JSON.stringify(newCache));
-  };
+    setResultsCache((prev) => {
+      const next = { ...prev, [target]: result };
+      localStorage.setItem(VT_RESULTS_CACHE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   // 도메인이 실패 목록에 있는지 확인하는 함수
-  const isDomainFailed = (domain) => {
-    return failedDomains.includes(domain);
-  };
+  const isDomainFailed = useCallback(
+    (domain) => {
+      return failedDomains.includes(domain);
+    },
+    [failedDomains]
+  );
 
   // 타겟이 이미 분석되었는지 확인하는 함수
-  const isTargetAnalyzed = (target) => {
-    return target in analyzedTargets;
-  };
+  const isTargetAnalyzed = useCallback(
+    (target) => {
+      return target in analyzedTargets;
+    },
+    [analyzedTargets]
+  );
 
   // 이메일 분석 결과 가져오기
   useEffect(() => {
@@ -340,8 +350,6 @@ export default function EmailAnalysisResult() {
               console.log(`분석 중: ${target}`);
               newAnalyzedTargets[target] = { status: "analyzing" };
 
-              const type = isValidIpAddress(target) ? "ip" : "url";
-
               try {
                 const response = await axios.post("/api/virustotal", {
                   target,
@@ -405,7 +413,15 @@ export default function EmailAnalysisResult() {
     };
 
     autoAnalyzeTargets();
-  }, [emailData]);
+  }, [
+    emailData,
+    analyzedTargets,
+    isAnalyzing,
+    isDomainFailed,
+    isTargetAnalyzed,
+    saveFailedDomain,
+    saveResultToCache,
+  ]);
 
   // VirusTotal 분석 수행
   const handleVirusTotalCheck = async (target, type = "ip") => {
@@ -590,7 +606,7 @@ export default function EmailAnalysisResult() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <RiskScoreChecklist emailData={emailData} />
-          <AuthenticationInfo emailData={emailData} ipLocations={ipLocations} />
+          <AuthenticationInfo emailData={emailData} />
         </div>
 
         {ipLocations.length > 0 && (
@@ -652,23 +668,6 @@ export default function EmailAnalysisResult() {
                 ))}
               </ul>
             </div>
-
-            {emailData.receivedPaths && emailData.receivedPaths.length > 0 && (
-              <div className="mt-4 text-sm">
-                <h3 className="font-bold mb-2">모든 Received 경로(시간순):</h3>
-                <ul className="space-y-2">
-                  {emailData.receivedPaths.map((path, idx) => (
-                    <li
-                      key={`full-path-${idx}`}
-                      className="flex items-center p-2 bg-gray-50 dark:bg-gray-700 rounded"
-                    >
-                      <span className="mr-2 font-medium">{idx + 1}.</span>
-                      <span>{path}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             {emailData.receivedDetails &&
               emailData.receivedDetails.length > 0 && (
@@ -752,19 +751,6 @@ export default function EmailAnalysisResult() {
                               </td>
                               <td className="p-2">
                                 {detail.ip || "-"}
-                                {detail.ip && (
-                                  <div className="mt-1">
-                                    <VirusTotalButton
-                                      target={detail.ip}
-                                      type="ip"
-                                      onClick={() =>
-                                        handleVirusTotalCheck(detail.ip, "ip")
-                                      }
-                                      analyzed={analyzedTargets[detail.ip]}
-                                      failed={isDomainFailed(detail.ip)}
-                                    />
-                                  </div>
-                                )}
                               </td>
                               <td className="p-2">{detail.date || "-"}</td>
                               <td className="p-2">

@@ -52,8 +52,8 @@ export default function PrivacyPolicy() {
                   <li><strong>첨부파일 정보:</strong> 첨부파일 이름, 확장자, 메타데이터 (파일 내용 자체는 수집하지 않음)</li>
                   <li><strong>IP 주소 및 네트워크 데이터:</strong> Received 헤더에서 추출한 발신 IP 주소, 지리적 위치, ISP 정보, DNS 조회 결과</li>
                   <li><strong>인증 정보:</strong> SPF, DKIM, DMARC 검증 결과</li>
-                  <li><strong>분석 메타데이터:</strong> 분석 타임스탬프, 고유 분석 ID (UUID), 위험도 점수 및 분류</li>
-                  <li><strong>세션 정보:</strong> 사용자 분석 이력 추적을 위한 쿠키 (analysis_ids)</li>
+                  <li><strong>분석 메타데이터:</strong> 분석 타임스탬프, 고유 분석 ID (UUID), 위험도 점수 및 분류 (브라우저 세션 범위)</li>
+                  <li><strong>세션 정보:</strong> 결과 화면 제공을 위한 브라우저 저장소(sessionStorage/localStorage) 정보</li>
                 </ul>
               </div>
 
@@ -69,8 +69,8 @@ export default function PrivacyPolicy() {
                   <li><strong>Attachment Information:</strong> Attachment file names, extensions, metadata (file contents are not collected)</li>
                   <li><strong>IP Addresses & Network Data:</strong> Source IP addresses extracted from Received headers, geographic location, ISP information, DNS lookup results</li>
                   <li><strong>Authentication Information:</strong> SPF, DKIM, DMARC validation results</li>
-                  <li><strong>Analysis Metadata:</strong> Analysis timestamp, unique analysis ID (UUID), risk scores and classifications</li>
-                  <li><strong>Session Information:</strong> Cookies for tracking user analysis history (analysis_ids)</li>
+                  <li><strong>Analysis Metadata:</strong> Analysis timestamp, unique analysis ID (UUID), risk scores and classifications (session scope)</li>
+                  <li><strong>Session Information:</strong> Browser storage data (sessionStorage/localStorage) used to render result screens</li>
                 </ul>
               </div>
             </section>
@@ -91,8 +91,8 @@ export default function PrivacyPolicy() {
                   <li>이메일 전송 경로 추적 및 IP 지리적 위치 분석</li>
                   <li>AI 기반 이메일 의도 분류 (정상/스팸/피싱/악성코드)</li>
                   <li>사용자에게 이메일 위험도 평가 결과 제공</li>
-                  <li>과거 분석 결과 조회 및 URL 공유 기능 제공</li>
-                  <li>서비스 개선을 위한 익명화된 통계 데이터 분석</li>
+                  <li>분석 직후 결과 화면 제공 (동일 브라우저 세션 범위)</li>
+                  <li>서비스 안정성 유지를 위한 최소한의 비식별 운영 로그 확인</li>
                 </ul>
               </div>
 
@@ -106,8 +106,8 @@ export default function PrivacyPolicy() {
                   <li>Tracking email transmission paths and analyzing IP geographic locations</li>
                   <li>AI-based email intent classification (legitimate/spam/phishing/malware)</li>
                   <li>Providing users with email risk assessment results</li>
-                  <li>Providing access to historical analysis results and URL sharing features</li>
-                  <li>Analyzing anonymized statistical data for service improvement</li>
+                  <li>Providing post-analysis result screens within the same browser session</li>
+                  <li>Reviewing minimal de-identified operational logs for service reliability</li>
                 </ul>
               </div>
             </section>
@@ -123,26 +123,23 @@ export default function PrivacyPolicy() {
 
                 <p className="font-semibold mt-3 mb-2">📦 데이터 저장 방식</p>
                 <ul className="list-disc ml-6 mt-2 space-y-1">
-                  <li><strong>주 저장소:</strong> Supabase PostgreSQL 데이터베이스에 저장</li>
-                  <li><strong>백업 저장소:</strong> 데이터베이스 장애 시 로컬 파일 시스템에 임시 저장</li>
-                  <li><strong>데이터 형식:</strong> JSON 형식으로 구조화되어 저장</li>
+                  <li><strong>서버 저장:</strong> 이메일 원문 및 분석 결과를 서버 데이터베이스에 저장하지 않습니다</li>
+                  <li><strong>브라우저 세션 저장:</strong> 결과 페이지 이동을 위해 사용자 브라우저의 sessionStorage에 일시 저장됩니다</li>
+                  <li><strong>세션 종료 처리:</strong> 브라우저 탭/세션 종료 시 해당 데이터는 자동으로 사라질 수 있습니다</li>
                 </ul>
 
                 <p className="font-semibold mt-3 mb-2">🔒 보안 조치</p>
                 <ul className="list-disc ml-6 mt-2 space-y-1">
                   <li>모든 데이터 전송 시 TLS/HTTPS 암호화 적용</li>
-                  <li>데이터베이스 접근 자격 증명은 환경 변수로 안전하게 관리</li>
                   <li>API 키는 서버측에만 저장되며 클라이언트에 노출되지 않음</li>
-                  <li>세션 쿠키는 HttpOnly 및 SameSite=Lax 플래그로 보호</li>
                   <li>사용자는 본인이 분석한 결과만 조회 가능</li>
                 </ul>
 
                 <p className="font-semibold mt-3 mb-2">🗑️ 데이터 보관 및 파기</p>
                 <ul className="list-disc ml-6 mt-2 space-y-1">
-                  <li><strong>보관 기간:</strong> 분석 데이터는 최대 90일간 보관 후 자동 삭제됩니다</li>
-                  <li><strong>즉시 삭제 요청:</strong> 사용자는 언제든지 특정 분석 데이터의 즉시 삭제를 요청할 수 있습니다</li>
-                  <li><strong>익명화 처리:</strong> 통계 분석 시에는 개인을 식별할 수 없는 형태로 가공된 데이터만 활용됩니다</li>
-                  <li><strong>백업 데이터:</strong> 로컬 파일 시스템 백업도 동일한 90일 보관 정책을 따릅니다</li>
+                  <li><strong>서버 보관:</strong> 서버 측 분석 데이터 장기 보관을 수행하지 않습니다</li>
+                  <li><strong>브라우저 측 보관:</strong> sessionStorage 기반 임시 데이터는 사용자의 브라우저 상태에 따라 삭제됩니다</li>
+                  <li><strong>서비스 통계:</strong> 개인을 식별하지 않는 최소 운영 로그만 별도로 관리될 수 있습니다</li>
                 </ul>
               </div>
 
@@ -151,26 +148,23 @@ export default function PrivacyPolicy() {
 
                 <p className="font-semibold mt-3 mb-2">📦 Data Storage Methods</p>
                 <ul className="list-disc ml-6 mt-2 space-y-1">
-                  <li><strong>Primary Storage:</strong> Stored in Supabase PostgreSQL database</li>
-                  <li><strong>Backup Storage:</strong> Temporarily stored in local file system during database failures</li>
-                  <li><strong>Data Format:</strong> Stored in structured JSON format</li>
+                  <li><strong>Server Storage:</strong> Email raw content and analysis results are not persisted in a server database</li>
+                  <li><strong>Browser Session Storage:</strong> Results may be temporarily kept in browser sessionStorage to support navigation</li>
+                  <li><strong>Session End Handling:</strong> Data may be removed when the tab or browser session ends</li>
                 </ul>
 
                 <p className="font-semibold mt-3 mb-2">🔒 Security Measures</p>
                 <ul className="list-disc ml-6 mt-2 space-y-1">
                   <li>All data transmission encrypted with TLS/HTTPS</li>
-                  <li>Database access credentials securely managed via environment variables</li>
                   <li>API keys stored server-side only and never exposed to clients</li>
-                  <li>Session cookies protected with HttpOnly and SameSite=Lax flags</li>
                   <li>Users can only access their own analysis results</li>
                 </ul>
 
                 <p className="font-semibold mt-3 mb-2">🗑️ Data Retention and Deletion</p>
                 <ul className="list-disc ml-6 mt-2 space-y-1">
-                  <li><strong>Retention Period:</strong> Analysis data is automatically deleted after a maximum of 90 days</li>
-                  <li><strong>Immediate Deletion Requests:</strong> Users can request immediate deletion of specific analysis data at any time</li>
-                  <li><strong>Anonymization:</strong> Statistical analysis uses only anonymized data that cannot identify individuals</li>
-                  <li><strong>Backup Data:</strong> Local file system backups follow the same 90-day retention policy</li>
+                  <li><strong>Server Retention:</strong> No long-term server-side retention of analysis payloads is performed</li>
+                  <li><strong>Browser Retention:</strong> Temporary sessionStorage data is controlled by the user&apos;s browser session state</li>
+                  <li><strong>Operational Logs:</strong> Minimal non-identifying logs may be retained for reliability and security operations</li>
                 </ul>
               </div>
             </section>
@@ -206,14 +200,6 @@ export default function PrivacyPolicy() {
                     </ul>
                   </div>
 
-                  <div>
-                    <p className="font-semibold">🗄️ Supabase</p>
-                    <ul className="list-disc ml-6 mt-1 text-sm">
-                      <li><strong>제공 정보:</strong> 전체 분석 결과 데이터</li>
-                      <li><strong>목적:</strong> 데이터베이스 호스팅 및 저장</li>
-                      <li><strong>처리 방식:</strong> 암호화된 연결을 통한 저장</li>
-                    </ul>
-                  </div>
                 </div>
 
                 <p className="mt-4 font-semibold">⚠️ 중요 고지사항</p>
@@ -249,14 +235,6 @@ export default function PrivacyPolicy() {
                     </ul>
                   </div>
 
-                  <div>
-                    <p className="font-semibold">🗄️ Supabase</p>
-                    <ul className="list-disc ml-6 mt-1 text-sm">
-                      <li><strong>Information Shared:</strong> Complete analysis result data</li>
-                      <li><strong>Purpose:</strong> Database hosting and storage</li>
-                      <li><strong>Processing:</strong> Storage via encrypted connections</li>
-                    </ul>
-                  </div>
                 </div>
 
                 <p className="mt-4 font-semibold">⚠️ Important Notice</p>
@@ -278,12 +256,9 @@ export default function PrivacyPolicy() {
                 <h4 className="font-semibold mb-2">🇰🇷 한국어</h4>
                 <p className="mb-2">사용자는 개인정보에 대해 다음과 같은 권리를 가집니다:</p>
                 <ul className="list-disc ml-6 mt-2 space-y-2">
-                  <li><strong>열람 요청:</strong> 본인의 분석 결과 데이터를 확인할 권리</li>
-                  <li><strong>정정 요청:</strong> 잘못된 정보의 수정을 요청할 권리</li>
-                  <li><strong>삭제 요청:</strong> 특정 분석 결과의 즉시 삭제를 요청할 권리</li>
-                  <li><strong>처리 정지 요청:</strong> 개인정보 처리의 일시적 중단을 요청할 권리</li>
-                  <li><strong>동의 철회:</strong> 제공한 동의를 언제든지 철회할 권리</li>
-                  <li><strong>데이터 이동권:</strong> 본인의 데이터를 다른 서비스로 이동할 권리</li>
+                  <li><strong>열람 권리:</strong> 동일 브라우저 세션에서 본인의 분석 결과를 확인할 권리</li>
+                  <li><strong>삭제 권리:</strong> 브라우저 저장소(sessionStorage/localStorage) 삭제를 통해 로컬 분석 데이터를 제거할 권리</li>
+                  <li><strong>문의 권리:</strong> 처리 방식과 제3자 제공 내역에 대해 문의할 권리</li>
                 </ul>
 
                 <p className="mt-4 font-semibold">📞 권리 행사 방법</p>
@@ -293,7 +268,7 @@ export default function PrivacyPolicy() {
                 <ul className="list-disc ml-6 mt-2 space-y-1">
                   <li>이메일: <a href="mailto:darkwinterlab@gmail.com" className="text-primary underline">darkwinterlab@gmail.com</a></li>
                   <li>웹사이트: <a href="https://darkwinterlab.com" className="text-primary underline" target="_blank" rel="noopener noreferrer">https://darkwinterlab.com</a></li>
-                  <li>처리 기한: 요청 접수 후 7일 이내 처리 (부득이한 사유 시 최대 30일)</li>
+                  <li>안내 범위: 서버 영구 저장 데이터가 없으므로 브라우저 저장소 삭제 안내 중심으로 지원합니다</li>
                 </ul>
               </div>
 
@@ -301,12 +276,9 @@ export default function PrivacyPolicy() {
                 <h4 className="font-semibold mb-2">🇺🇸 English</h4>
                 <p className="mb-2">Users have the following rights regarding their personal information:</p>
                 <ul className="list-disc ml-6 mt-2 space-y-2">
-                  <li><strong>Right to Access:</strong> Right to view your own analysis result data</li>
-                  <li><strong>Right to Rectification:</strong> Right to request correction of inaccurate information</li>
-                  <li><strong>Right to Erasure:</strong> Right to request immediate deletion of specific analysis results</li>
-                  <li><strong>Right to Restriction:</strong> Right to request temporary suspension of personal information processing</li>
-                  <li><strong>Right to Withdraw Consent:</strong> Right to withdraw provided consent at any time</li>
-                  <li><strong>Right to Data Portability:</strong> Right to move your data to another service</li>
+                  <li><strong>Right to Access:</strong> Right to view your analysis results within the same browser session context</li>
+                  <li><strong>Right to Erasure:</strong> Right to remove local analysis data by clearing browser storage (sessionStorage/localStorage)</li>
+                  <li><strong>Right to Inquiry:</strong> Right to ask how data is processed and shared with third-party APIs</li>
                 </ul>
 
                 <p className="mt-4 font-semibold">📞 How to Exercise Your Rights</p>
@@ -316,7 +288,7 @@ export default function PrivacyPolicy() {
                 <ul className="list-disc ml-6 mt-2 space-y-1">
                   <li>Email: <a href="mailto:darkwinterlab@gmail.com" className="text-primary underline">darkwinterlab@gmail.com</a></li>
                   <li>Website: <a href="https://darkwinterlab.com" className="text-primary underline" target="_blank" rel="noopener noreferrer">https://darkwinterlab.com</a></li>
-                  <li>Processing Time: Within 7 days of receiving the request (maximum 30 days in unavoidable circumstances)</li>
+                  <li>Support Scope: Since there is no persistent server-side storage, support focuses on browser-storage removal guidance</li>
                 </ul>
               </div>
             </section>
@@ -330,17 +302,17 @@ export default function PrivacyPolicy() {
               <div className="mb-4">
                 <h4 className="font-semibold mb-2">🇰🇷 한국어</h4>
                 <p className="mb-2">
-                  NAVER MAIL ANALYZER는 다음과 같은 쿠키를 사용합니다:
+                  NAVER MAIL ANALYZER는 필수 기능 제공을 위해 브라우저 저장소를 사용합니다:
                 </p>
                 <ul className="list-disc ml-6 mt-2 space-y-2">
-                  <li><strong>필수 쿠키:</strong>
+                  <li><strong>세션 저장소(sessionStorage):</strong>
                     <ul className="list-circle ml-6 mt-1 text-sm">
-                      <li><code>analysis_ids</code>: 사용자의 분석 이력을 추적하는 쿠키</li>
-                      <li>유효 기간: 90일</li>
-                      <li>목적: 사용자가 본인이 분석한 이메일 결과에만 접근할 수 있도록 보장</li>
+                      <li><code>analysisResult:&lt;id&gt;</code>: 결과 페이지 이동 및 조회를 위한 임시 데이터</li>
+                      <li>유효 기간: 브라우저 세션</li>
+                      <li>목적: 서버 저장 없이 동일 세션에서 분석 결과를 표시</li>
                     </ul>
                   </li>
-                  <li><strong>기능 쿠키:</strong>
+                  <li><strong>기능 저장소(localStorage):</strong>
                     <ul className="list-circle ml-6 mt-1 text-sm">
                       <li>다크모드/라이트모드 테마 설정 (localStorage)</li>
                       <li>목적: 사용자 UI 선호도 저장</li>
@@ -348,24 +320,24 @@ export default function PrivacyPolicy() {
                   </li>
                 </ul>
                 <p className="mt-3 text-sm">
-                  ℹ️ 브라우저 설정에서 쿠키를 거부할 수 있으나, 이 경우 일부 기능이 제한될 수 있습니다.
+                  ℹ️ 브라우저 저장소를 비우거나 차단하면 결과 화면 이동/조회 기능이 제한될 수 있습니다.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold mb-2">🇺🇸 English</h4>
                 <p className="mb-2">
-                  NAVER MAIL ANALYZER uses the following cookies:
+                  NAVER MAIL ANALYZER uses browser storage for essential functionality:
                 </p>
                 <ul className="list-disc ml-6 mt-2 space-y-2">
-                  <li><strong>Essential Cookies:</strong>
+                  <li><strong>Session Storage (sessionStorage):</strong>
                     <ul className="list-circle ml-6 mt-1 text-sm">
-                      <li><code>analysis_ids</code>: Cookie tracking user&apos;s analysis history</li>
-                      <li>Validity: 90 days</li>
-                      <li>Purpose: Ensure users can only access their own email analysis results</li>
+                      <li><code>analysisResult:&lt;id&gt;</code>: Temporary data for result-page navigation and viewing</li>
+                      <li>Validity: Browser session</li>
+                      <li>Purpose: Show analysis results in-session without server persistence</li>
                     </ul>
                   </li>
-                  <li><strong>Functional Cookies:</strong>
+                  <li><strong>Functional Storage (localStorage):</strong>
                     <ul className="list-circle ml-6 mt-1 text-sm">
                       <li>Dark/light mode theme settings (localStorage)</li>
                       <li>Purpose: Store user UI preferences</li>
@@ -373,7 +345,7 @@ export default function PrivacyPolicy() {
                   </li>
                 </ul>
                 <p className="mt-3 text-sm">
-                  ℹ️ You can refuse cookies in your browser settings, but some features may be limited.
+                  ℹ️ If browser storage is cleared or blocked, result-page navigation/view features may be limited.
                 </p>
               </div>
             </section>
