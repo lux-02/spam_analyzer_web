@@ -340,6 +340,12 @@ export default function EmailAnalysisResult() {
       const targetsArray = Array.from(targets);
       const batchSize = 3;
       const newAnalyzedTargets = { ...analyzedTargets };
+      let hasAnalyzedTargetChanges = false;
+
+      if (targetsArray.length === 0) {
+        setIsAnalyzing(false);
+        return;
+      }
 
       for (let i = 0; i < targetsArray.length; i += batchSize) {
         const batch = targetsArray.slice(i, i + batchSize);
@@ -349,6 +355,7 @@ export default function EmailAnalysisResult() {
             try {
               console.log(`분석 중: ${target}`);
               newAnalyzedTargets[target] = { status: "analyzing" };
+              hasAnalyzedTargetChanges = true;
 
               try {
                 const response = await axios.post("/api/virustotal", {
@@ -365,6 +372,7 @@ export default function EmailAnalysisResult() {
                   ) {
                     saveFailedDomain(target);
                     newAnalyzedTargets[target] = { status: "failed" };
+                    hasAnalyzedTargetChanges = true;
                   } else {
                     saveResultToCache(target, data);
 
@@ -384,9 +392,11 @@ export default function EmailAnalysisResult() {
                           ? "suspicious"
                           : threat,
                     };
+                    hasAnalyzedTargetChanges = true;
                   }
                 } else {
                   newAnalyzedTargets[target] = { status: "error" };
+                  hasAnalyzedTargetChanges = true;
                 }
               } catch (apiError) {
                 // VirusTotal API 호출 오류 처리 (500 에러 포함)
@@ -398,16 +408,20 @@ export default function EmailAnalysisResult() {
                   status: "error",
                   message: "API 요청 실패 (분석 건너뜀)",
                 };
+                hasAnalyzedTargetChanges = true;
               }
             } catch (error) {
               console.error(`자동 분석 실패 (${target}):`, error);
               newAnalyzedTargets[target] = { status: "error" };
+              hasAnalyzedTargetChanges = true;
             }
           })
         );
       }
 
-      setAnalyzedTargets(newAnalyzedTargets);
+      if (hasAnalyzedTargetChanges) {
+        setAnalyzedTargets(newAnalyzedTargets);
+      }
       setIsAnalyzing(false);
       console.log("자동 분석 완료");
     };
