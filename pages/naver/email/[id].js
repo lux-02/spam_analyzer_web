@@ -22,6 +22,64 @@ import Footer from "@/components/ui/Footer";
 // 로컬 스토리지 키 상수
 const FAILED_DOMAINS_KEY = "vtFailedDomains";
 const VT_RESULTS_CACHE_KEY = "vtResultsCache";
+const ANALYSIS_SESSION_KEY_PREFIX = "analysisResult:";
+
+const getAnalysisSessionKey = (analysisId) =>
+  `${ANALYSIS_SESSION_KEY_PREFIX}${analysisId}`;
+
+const decodeBase64UrlJson = (payload) => {
+  if (!payload || typeof payload !== "string") return null;
+
+  try {
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json);
+  } catch (error) {
+    console.error("분석 페이로드 디코딩 오류:", error);
+    return null;
+  }
+};
+
+const readAnalysisFromHash = () => {
+  if (typeof window === "undefined") return null;
+  const hash = window.location.hash || "";
+  if (!hash.startsWith("#")) return null;
+
+  const params = new URLSearchParams(hash.slice(1));
+  const encoded = params.get("analysis");
+  return decodeBase64UrlJson(encoded);
+};
+
+const clearAnalysisHash = () => {
+  if (typeof window === "undefined") return;
+  if (!window.location.hash) return;
+
+  const cleanUrl = `${window.location.pathname}${window.location.search}`;
+  window.history.replaceState(null, "", cleanUrl);
+};
+
+const saveAnalysisToSession = (analysisId, data) => {
+  if (typeof window === "undefined" || !analysisId || !data) return;
+  sessionStorage.setItem(getAnalysisSessionKey(analysisId), JSON.stringify(data));
+};
+
+const readAnalysisFromSession = (analysisId) => {
+  if (typeof window === "undefined" || !analysisId) return null;
+
+  const raw = sessionStorage.getItem(getAnalysisSessionKey(analysisId));
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error("세션 분석 결과 파싱 오류:", error);
+    sessionStorage.removeItem(getAnalysisSessionKey(analysisId));
+    return null;
+  }
+};
 
 export default function EmailAnalysisResult() {
   const router = useRouter();
@@ -105,13 +163,32 @@ export default function EmailAnalysisResult() {
 
       try {
         setLoading(true);
-        const response = await fetch(`/api/email/${id}`);
 
-        if (!response.ok) {
-          throw new Error("분석 결과를 가져오는데 실패했습니다.");
+        let data = readAnalysisFromHash();
+        if (data) {
+          saveAnalysisToSession(id, data);
+          if (data.id && data.id !== id) {
+            saveAnalysisToSession(data.id, data);
+          }
+          clearAnalysisHash();
         }
 
-        const data = await response.json();
+        if (!data) {
+          data = readAnalysisFromSession(id);
+        }
+
+        if (!data) {
+          // 하위 호환: 과거 ID 기반 조회
+          const response = await fetch(`/api/email/${id}`);
+          if (!response.ok) {
+            throw new Error(
+              "분석 결과를 찾을 수 없습니다. 개인정보 보호 정책으로 서버 저장이 비활성화되어 세션이 만료되었을 수 있습니다."
+            );
+          }
+          data = await response.json();
+          saveAnalysisToSession(id, data);
+        }
+
         setEmailData(data);
 
         // IP 주소 후보 수집: api가 제공하는 ipAddresses 없을 경우 Received 헤더/전송 IP에서 추출

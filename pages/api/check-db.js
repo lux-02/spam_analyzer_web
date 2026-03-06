@@ -17,6 +17,8 @@ export default async function handler(req, res) {
       message: "Supabase 연결이 정상적으로 작동 중입니다.",
       database: "PostgreSQL (Supabase)",
       server: "https://crecmfkspiblkztvicqr.supabase.co",
+      analysisStorage: "disabled",
+      note: "개인정보 보호를 위해 이메일 분석 결과는 서버에 저장하지 않습니다.",
     });
   } catch (error) {
     console.error("Supabase 연결 확인 중 오류 발생:", error);

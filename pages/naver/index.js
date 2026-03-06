@@ -55,19 +55,24 @@ export default function Home() {
         throw new Error(data.error || "분석 중 오류가 발생했습니다.");
       }
 
-      // 결과에서 분석 ID 추출
-      const analysisId = data.result?.id;
+      const analysisResult = data.result;
+      const analysisId = analysisResult?.id;
 
-      // ID가 없으면 오류 처리
-      if (!analysisId) {
+      if (!analysisResult || !analysisId) {
         throw new Error(
           "분석 결과를 가져오는데 실패했습니다: 분석 ID를 찾을 수 없습니다."
         );
       }
 
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          `analysisResult:${analysisId}`,
+          JSON.stringify(analysisResult)
+        );
+      }
+
       console.log("분석 완료, 결과 페이지로 이동합니다:", analysisId);
 
-      // 분석 ID로 결과 페이지로 이동
       router.push(`/naver/email/${analysisId}`);
     } catch (err) {
       setError(err.message);
@@ -259,7 +264,7 @@ export default function Home() {
     {
       title: "최소한의 수집",
       description:
-        "분석 목적 외 개인 식별 정보는 저장하지 않으며 주기적으로 폐기합니다.",
+        "분석 데이터는 서버에 저장하지 않고, 사용자 브라우저 세션에서만 결과를 확인합니다.",
     },
     {
       title: "암호화 전송",
@@ -281,7 +286,7 @@ export default function Home() {
     {
       question: "분석한 데이터는 저장되나요?",
       answer:
-        "조회 편의를 위해 제한적으로 보관될 수 있으나 민감 정보는 최소화하며 정책에 따라 주기적으로 삭제합니다.",
+        "아니요. 분석 결과는 서버에 저장하지 않으며, 분석 직후 사용자 브라우저 세션에서만 확인할 수 있습니다.",
     },
     {
       question: "기업용 커스텀 규칙을 적용할 수 있나요?",
