@@ -66,7 +66,7 @@ const AuthStatus = ({ type, status }) => {
   );
 };
 
-const AuthenticationInfo = ({ emailData }) => {
+const AuthenticationInfo = ({ emailData, className = "" }) => {
   if (!emailData) return null;
 
   const { spf, dkim, dmarc } = emailData;
@@ -82,7 +82,9 @@ const AuthenticationInfo = ({ emailData }) => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
+    <div
+      className={`bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6 ${className}`}
+    >
       <h2 className="text-xl font-bold mb-4 flex items-center">
         <span className="mr-2">🔐</span>
         인증 정보

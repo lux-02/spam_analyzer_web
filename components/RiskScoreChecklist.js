@@ -55,7 +55,7 @@ const CheckItem = ({
   );
 };
 
-const RiskScoreChecklist = ({ emailData }) => {
+const RiskScoreChecklist = ({ emailData, className = "" }) => {
   const [showChecklist, setShowChecklist] = useState(true);
 
   if (!emailData || !emailData.risk) return null;
@@ -159,7 +159,9 @@ const RiskScoreChecklist = ({ emailData }) => {
     calculatedScore >= 70 ? "high" : calculatedScore >= 40 ? "medium" : "low";
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
+    <div
+      className={`bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6 ${className}`}
+    >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold">위험도 점수</h2>
         <button

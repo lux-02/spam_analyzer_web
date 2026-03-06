@@ -1,27 +1,39 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { Orbitron, Rajdhani } from "next/font/google";
 import axios from "axios";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   countryCodeToFlag,
-  isValidUrl,
   isAnalyzableTarget,
 } from "@/utils/emailAnalyzer";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 // 컴포넌트 import
 import EmailHeader from "@/components/EmailHeader";
 import AuthenticationInfo from "@/components/AuthenticationInfo";
-import ReceivedPathMap from "@/components/ReceivedPathMap";
 import EmailBodyContent from "@/components/EmailBodyContent";
 import RiskScoreChecklist from "@/components/RiskScoreChecklist";
 import VirusTotalButton from "@/components/VirusTotalButton";
 import VirusTotalModal from "@/components/VirusTotalModal";
-import AdBanner from "@/components/ui/AdBanner";
 import Footer from "@/components/ui/Footer";
+import styles from "@/styles/CiaConsole.module.css";
 // 로컬 스토리지 키 상수
 const FAILED_DOMAINS_KEY = "vtFailedDomains";
 const VT_RESULTS_CACHE_KEY = "vtResultsCache";
 const ANALYSIS_SESSION_KEY_PREFIX = "analysisResult:";
+
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-orbitron",
+});
+
+const rajdhani = Rajdhani({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-rajdhani",
+});
 
 const getAnalysisSessionKey = (analysisId) =>
   `${ANALYSIS_SESSION_KEY_PREFIX}${analysisId}`;
@@ -87,7 +99,6 @@ export default function EmailAnalysisResult() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [ipLocations, setIpLocations] = useState([]);
-  const [showMap, setShowMap] = useState(true);
   const [showDetails, setShowDetails] = useState(true);
 
   // VirusTotal 관련 상태
@@ -99,6 +110,34 @@ export default function EmailAnalysisResult() {
   const [analyzedTargets, setAnalyzedTargets] = useState({}); // 분석된 타겟 상태 추가
   const [resultsCache, setResultsCache] = useState({}); // 결과 캐시 상태 추가
   const [isAnalyzing, setIsAnalyzing] = useState(false); // 분석 중 상태 추가
+  const shouldReduceMotion = useReducedMotion();
+
+  const getPanelMotion = (delay = 0) =>
+    shouldReduceMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 18 },
+          animate: { opacity: 1, y: 0 },
+          transition: {
+            duration: 0.45,
+            delay,
+            ease: [0.22, 1, 0.36, 1],
+          },
+        };
+
+  const getRouteItemMotion = (index = 0) =>
+    shouldReduceMotion
+      ? {}
+      : {
+          initial: { opacity: 0, x: -12 },
+          animate: { opacity: 1, x: 0 },
+          whileHover: { x: 4, scale: 1.004 },
+          transition: {
+            duration: 0.3,
+            delay: 0.22 + index * 0.04,
+            ease: [0.22, 1, 0.36, 1],
+          },
+        };
 
   // 초기화 시 로컬 스토리지에서 실패한 도메인 및 캐시된 결과 로드
   useEffect(() => {
@@ -517,11 +556,6 @@ export default function EmailAnalysisResult() {
     setVirusTotalModalOpen(false);
   };
 
-  // VirusTotal 체크 및 VT Graph 모달 열기
-  const handleVTGraphOpen = (ip) => {
-    handleVirusTotalCheck(ip, "ip");
-  };
-
   // 로딩 처리
   if (loading) {
     return (
@@ -563,7 +597,7 @@ export default function EmailAnalysisResult() {
             분석 결과 없음
           </h1>
           <p className="text-gray-700 mb-4">
-            해당 ID의 분석 결과를 찾을 수 없습니다.
+            해당 ID의 분석 결과를 찾을 수 없습니다. 서버 비저장 정책으로 인해 브라우저 세션이 종료되면 결과가 사라질 수 있습니다.
           </p>
           <button
             onClick={() => router.push("/")}
@@ -576,31 +610,24 @@ export default function EmailAnalysisResult() {
     );
   }
 
-  // 메타 타이틀 설정
-  const pageTitle = emailData.subject
-    ? `${emailData.subject} - 스팸 메일 분석 결과`
-    : "이메일 분석 결과";
-
-  // 지도 표시 토글 핸들러
-  const toggleMap = () => {
-    setShowMap(!showMap);
-  };
-
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-text dark:text-white">
+    <div
+      className={`min-h-screen bg-white dark:bg-gray-900 text-text dark:text-white ${styles.consolePage} ${orbitron.variable} ${rajdhani.variable}`}
+    >
+      <div className={styles.gridBackdrop} aria-hidden="true" />
       <Head>
         <title>이메일 분석 결과 - NAVER MAIL ANALYZER</title>
         <meta name="description" content="네이버 이메일 스팸/피싱 분석 결과" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <header className="bg-gradient-to-r from-blue-700 to-blue-500 text-white p-4 shadow-md mb-6">
+      <header className={`${styles.headerBar} text-white p-4 shadow-md mb-6`}>
         <div className="container mx-auto">
           <div className="flex items-center justify-between">
             <h1
-              className="text-xl font-semibold"
+              className={`text-xl font-semibold ${styles.brandTitle}`}
               onClick={() => router.push("/naver")}
             >
-              NAVER MAIL ANALYZER
+              THREAT INTELLIGENCE CONSOLE
             </h1>
 
             <ThemeToggle />
@@ -608,50 +635,62 @@ export default function EmailAnalysisResult() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <EmailHeader emailData={emailData} />
+      <div className={`container mx-auto px-4 py-8 ${styles.consoleContainer}`}>
+        <motion.div className={styles.commandStrip} {...getPanelMotion(0.02)}>
+          <span className={styles.stripLabel}>OPS MODE</span>
+          <span className={styles.stripValue}>LIVE MONITORING</span>
+          <span className={styles.stripLabel}>ANALYSIS ID</span>
+          <span className={styles.stripValue}>{emailData.id}</span>
+          <span className={styles.stripLabel}>THREAT SCORE</span>
+          <span className={styles.stripValue}>{emailData.risk?.score ?? "-"}</span>
+        </motion.div>
+
+        <motion.div {...getPanelMotion(0.06)}>
+          <EmailHeader emailData={emailData} className={styles.hudPanel} />
+        </motion.div>
 
         {isAnalyzing && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-300 rounded flex items-center">
+          <motion.div
+            className={`mb-4 p-3 bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-300 rounded flex items-center ${styles.statusAlert}`}
+            initial={shouldReduceMotion ? undefined : { opacity: 0, y: 8 }}
+            animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+            transition={shouldReduceMotion ? undefined : { duration: 0.28 }}
+          >
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-800 dark:border-blue-300 mr-2"></div>
             <span>이메일 내 IP 및 URL 자동 분석 중...</span>
-          </div>
+          </motion.div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <RiskScoreChecklist emailData={emailData} />
-          <AuthenticationInfo emailData={emailData} />
+          <motion.div {...getPanelMotion(0.1)}>
+            <RiskScoreChecklist
+              emailData={emailData}
+              className={styles.hudPanel}
+            />
+          </motion.div>
+          <motion.div {...getPanelMotion(0.14)}>
+            <AuthenticationInfo
+              emailData={emailData}
+              className={styles.hudPanel}
+            />
+          </motion.div>
         </div>
 
         {ipLocations.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold mb-4">이메일 경로 추적</h2>
-
-              <button
-                onClick={toggleMap}
-                className="mb-4 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-              >
-                {showMap ? "지도 숨기기" : "지도 보기"}
-              </button>
-            </div>
-
-            {showMap && (
-              <div
-                className="h-96 w-full rounded-lg overflow-hidden"
-                key={`map-container-${id}`}
-              >
-                <ReceivedPathMap ipLocations={ipLocations} />
-              </div>
-            )}
+          <motion.section
+            className={`bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6 ${styles.hudPanel} ${styles.routePanel}`}
+            {...getPanelMotion(0.18)}
+          >
+            <h2 className="text-xl font-bold mb-4">수신 경로 모니터링</h2>
 
             <div className="mt-4 text-sm">
-              <h3 className="font-bold mb-2">서버 경로:</h3>
+              <h3 className="font-bold mb-2">네트워크 홉:</h3>
               <ul className="space-y-2">
                 {ipLocations.map((loc, idx) => (
-                  <li
+                  <motion.li
                     key={`path-${idx}`}
-                    className="flex items-center p-2 bg-gray-50 dark:bg-gray-700 rounded"
+                    className={`flex items-center p-2 bg-gray-50 dark:bg-gray-700 rounded ${styles.routeItem}`}
+                    {...getRouteItemMotion(idx)}
                   >
                     <span className="mr-2 font-medium">{idx + 1}.</span>
                     <span className="mr-2">
@@ -678,7 +717,7 @@ export default function EmailAnalysisResult() {
                         failed={isDomainFailed(loc.ip)}
                       />
                     </div>
-                  </li>
+                  </motion.li>
                 ))}
               </ul>
             </div>
@@ -686,9 +725,10 @@ export default function EmailAnalysisResult() {
             {emailData.receivedDetails &&
               emailData.receivedDetails.length > 0 && (
                 <div className="mt-4">
-                  <button
+                  <motion.button
                     onClick={() => setShowDetails(!showDetails)}
-                    className="text-blue-500 hover:text-blue-600 flex items-center text-sm"
+                    className={`text-blue-500 hover:text-blue-600 flex items-center text-sm ${styles.toggleDetailButton}`}
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                   >
                     {showDetails
                       ? "상세 정보 숨기기"
@@ -706,10 +746,19 @@ export default function EmailAnalysisResult() {
                         clipRule="evenodd"
                       />
                     </svg>
-                  </button>
+                  </motion.button>
 
                   {showDetails && (
-                    <div className="mt-2 overflow-auto max-h-96 text-xs">
+                    <motion.div
+                      className="mt-2 overflow-auto max-h-96 text-xs"
+                      initial={
+                        shouldReduceMotion ? undefined : { opacity: 0, y: 6 }
+                      }
+                      animate={
+                        shouldReduceMotion ? undefined : { opacity: 1, y: 0 }
+                      }
+                      transition={shouldReduceMotion ? undefined : { duration: 0.24 }}
+                    >
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gray-100 dark:bg-gray-700">
@@ -784,19 +833,22 @@ export default function EmailAnalysisResult() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               )}
-          </div>
+          </motion.section>
         )}
 
-        <EmailBodyContent
-          emailData={emailData}
-          onCheckUrl={(url) => handleVirusTotalCheck(url, "url")}
-          failedDomains={failedDomains}
-          analyzedTargets={analyzedTargets}
-        />
+        <motion.div {...getPanelMotion(0.24)}>
+          <EmailBodyContent
+            emailData={emailData}
+            onCheckUrl={(url) => handleVirusTotalCheck(url, "url")}
+            failedDomains={failedDomains}
+            analyzedTargets={analyzedTargets}
+            className={styles.hudPanel}
+          />
+        </motion.div>
 
         {/* VirusTotal 검사 결과 모달 */}
         <VirusTotalModal

@@ -6,6 +6,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import Link from "next/link";
 import Footer from "@/components/ui/Footer";
 import { isValidEmailRawData } from "@/utils/validators";
+import { motion, useReducedMotion } from "framer-motion";
 
 export default function Home() {
   const [rawData, setRawData] = useState("");
@@ -16,6 +17,33 @@ export default function Home() {
   const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
+
+  const getRevealMotion = (delay = 0, distance = 26) =>
+    shouldReduceMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: distance },
+          whileInView: { opacity: 1, y: 0 },
+          viewport: { once: true, amount: 0.24 },
+          transition: {
+            duration: 0.55,
+            delay,
+            ease: [0.22, 1, 0.36, 1],
+          },
+        };
+
+  const getCardHover = () =>
+    shouldReduceMotion
+      ? {}
+      : {
+          whileHover: { y: -6, scale: 1.01 },
+          transition: {
+            type: "spring",
+            stiffness: 260,
+            damping: 24,
+          },
+        };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,7 +54,7 @@ export default function Home() {
     }
 
     if (!dataConsent) {
-      setError("개인정보 수집 및 이용에 동의해주세요.");
+      setError("외부 분석 API 처리 및 개인정보 처리방침에 동의해주세요.");
       return;
     }
 
@@ -100,7 +128,7 @@ export default function Home() {
   const heroHighlights = [
     "SPF·DKIM·DMARC 통과 여부와 발신 도메인 위장 탐지",
     "본문·링크·첨부 파일 속 피싱 키워드와 위험 행동 분석",
-    "Received 헤더 기반 IP·지리·ISP 정보 시각화",
+    "Received 헤더 기반 IP·지리·ISP 정보 추적",
   ];
 
   const statHighlights = [
@@ -162,7 +190,7 @@ export default function Home() {
     {
       title: "IP·지리 정보 추적",
       description:
-        "Received 헤더에 기록된 IP를 기반으로 국가·도시·ISP 정보를 시각화합니다.",
+        "Received 헤더에 기록된 IP를 기반으로 국가·도시·ISP 정보와 홉 순서를 정리합니다.",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -194,7 +222,7 @@ export default function Home() {
     {
       title: "결과 요약 & 조치 가이드",
       description:
-        "위험도 점수, 근거, 권장 대응까지 요약해 팀원과 안전하게 공유할 수 있습니다.",
+        "위험도 점수, 근거, 권장 대응까지 요약해 검토와 대응 판단에 바로 활용할 수 있습니다.",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -235,7 +263,7 @@ export default function Home() {
     {
       number: "03",
       title: "결과 확인",
-      description: "위험 근거와 대응 가이드를 확인하고 팀과 공유하세요.",
+      description: "위험 근거와 대응 가이드를 확인하고 즉시 대응 여부를 결정하세요.",
     },
   ];
 
@@ -343,7 +371,7 @@ export default function Home() {
     {
       criteria: "공유 방식",
       manual: "스크린샷과 메모를 직접 정리해 전달해야 합니다.",
-      analyzer: "분석 링크와 요약을 클릭 한 번으로 팀과 공유합니다.",
+      analyzer: "결과 화면에서 근거와 권장 대응을 바로 확인해 전달 시간을 줄입니다.",
     },
   ];
 
@@ -623,7 +651,10 @@ export default function Home() {
           )}
         </header>
 
-        <section className="mb-14 space-y-8">
+        <motion.section
+          {...getRevealMotion(0)}
+          className="mb-14 space-y-8"
+        >
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 via-primary/5 to-transparent p-8 shadow-custom dark:from-indigo-400/10 dark:via-primary/10 dark:shadow-custom-dark md:p-10">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary dark:bg-white/10">
               네이버 메일 보안 어시스턴트 BETA
@@ -682,7 +713,7 @@ export default function Home() {
               </ul>
               <div className="mt-5 rounded-xl border border-dashed border-indigo-300 p-4 text-xs text-text-light dark:border-indigo-500/40 dark:bg-gray-900/60 dark:text-gray-300">
                 분석 결과는 위험 근거와 대응 가이드를 포함하며, 복사 한 번으로
-                팀과 공유할 수 있습니다.
+                즉시 검토에 활용할 수 있습니다.
               </div>
             </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -694,10 +725,21 @@ export default function Home() {
               </a>
             </div>
             <div className="mt-10 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
-              {statHighlights.map((stat) => (
-                <div
+              {statHighlights.map((stat, index) => (
+                <motion.div
                   key={stat.value}
                   className="rounded-xl border border-white/40 bg-white/80 p-4 text-sm font-medium text-heading shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  {...getCardHover()}
+                  transition={
+                    shouldReduceMotion
+                      ? undefined
+                      : {
+                          type: "spring",
+                          stiffness: 260,
+                          damping: 24,
+                          delay: index * 0.04,
+                        }
+                  }
                 >
                   <div className="text-xl font-bold text-primary dark:text-primary-light">
                     {stat.value}
@@ -705,14 +747,15 @@ export default function Home() {
                   <p className="mt-1 text-xs text-text-light dark:text-gray-300">
                     {stat.description}
                   </p>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <section
+        <motion.section
           id="analyze"
+          {...getRevealMotion(0.06)}
           className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-3xl border border-gray-200 bg-gradient-to-br from-primary/5 via-white to-white p-6 shadow-custom focus-within:ring-2 focus-within:ring-primary/20 dark:border-gray-700 dark:from-primary/15 dark:via-gray-900 dark:to-gray-950 dark:shadow-custom-dark md:p-10"
         >
           <div
@@ -743,7 +786,7 @@ export default function Home() {
                   2. AI 분석
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 dark:bg-white/10">
-                  3. 결과 공유
+                  3. 결과 확인
                 </span>
               </div>
             </div>
@@ -762,7 +805,15 @@ export default function Home() {
 
           <div className="relative mt-10 grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="group relative overflow-hidden rounded-3xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 via-white to-white p-6 shadow-xl transition-all duration-300 focus-within:border-primary focus-within:shadow-primary/30 dark:from-primary/15 dark:via-gray-900 dark:to-gray-950">
+              <motion.div
+                className="group relative overflow-hidden rounded-3xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 via-white to-white p-6 shadow-xl transition-all duration-300 focus-within:border-primary focus-within:shadow-primary/30 dark:from-primary/15 dark:via-gray-900 dark:to-gray-950"
+                {...getRevealMotion(0.1, 18)}
+                whileHover={
+                  shouldReduceMotion
+                    ? undefined
+                    : { scale: 1.003, boxShadow: "0 18px 36px rgba(37, 99, 235, 0.18)" }
+                }
+              >
                 <div
                   className="pointer-events-none absolute -top-24 -right-20 h-56 w-56 rounded-full bg-primary/20 blur-3xl dark:bg-primary/30"
                   aria-hidden="true"
@@ -850,9 +901,12 @@ export default function Home() {
                     </span>
                   </span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="rounded-2xl border border-gray-200/70 bg-white/80 p-4 dark:border-gray-700/70 dark:bg-gray-900/60">
+              <motion.div
+                className="rounded-2xl border border-gray-200/70 bg-white/80 p-4 dark:border-gray-700/70 dark:bg-gray-900/60"
+                {...getRevealMotion(0.14, 16)}
+              >
                 <div className="flex items-start gap-3">
                   <input
                     id="dataConsent"
@@ -865,7 +919,7 @@ export default function Home() {
                     htmlFor="dataConsent"
                     className="text-xs text-text-light dark:text-gray-300"
                   >
-                    개인정보 수집 및 이용에 동의합니다.
+                    외부 분석 API(OpenAI/VirusTotal) 처리 및 개인정보 처리방침에 동의합니다.
                     <Link
                       href="/privacy-policy"
                       className="ml-2 text-primary hover:underline"
@@ -875,7 +929,7 @@ export default function Home() {
                     </Link>
                   </label>
                 </div>
-              </div>
+              </motion.div>
 
               {error && <div className="alert alert-danger">{error}</div>}
 
@@ -888,12 +942,16 @@ export default function Home() {
               </button>
               <p className="text-xs text-text-light dark:text-gray-400">
                 첨부 파일이나 링크를 열기 전에 결과를 확인하세요. 붙여넣은
-                원문은 분석 및 저장 정책에 따라 안전하게 처리됩니다.
+                원문은 서버 DB에 저장하지 않고 분석 처리에만 사용됩니다.
               </p>
             </form>
 
             <div className="space-y-4">
-              <div className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70">
+              <motion.div
+                className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70"
+                {...getRevealMotion(0.18, 16)}
+                {...getCardHover()}
+              >
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-heading dark:text-white">
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary">
                     ✓
@@ -908,9 +966,13 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
 
-              <div className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70">
+              <motion.div
+                className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70"
+                {...getRevealMotion(0.24, 16)}
+                {...getCardHover()}
+              >
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-heading dark:text-white">
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 text-orange-500 dark:bg-orange-500/20 dark:text-orange-300">
                     !
@@ -925,9 +987,13 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
 
-              <div className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70">
+              <motion.div
+                className="rounded-2xl border border-white/60 bg-white/80 p-5 shadow-md backdrop-blur dark:border-white/10 dark:bg-gray-900/70"
+                {...getRevealMotion(0.3, 16)}
+                {...getCardHover()}
+              >
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-heading dark:text-white">
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-200">
                     i
@@ -963,12 +1029,16 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mx-auto mt-16 max-w-5xl" id="extensions">
+        <motion.section
+          className="mx-auto mt-16 max-w-5xl"
+          id="extensions"
+          {...getRevealMotion(0.08)}
+        >
           <h3 className="text-center text-2xl font-bold text-heading dark:text-white">
             브라우저에서도 한 번에 분석
           </h3>
@@ -977,11 +1047,12 @@ export default function Home() {
             있습니다.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <a
+            <motion.a
               href="https://chromewebstore.google.com/detail/egiihcmplomfonhicnabpifjpgkhcimi?utm_source=item-share-cb"
               target="_blank"
               rel="noopener noreferrer"
               className="flex flex-col items-start gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              {...getCardHover()}
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
                 <Image
@@ -1000,13 +1071,14 @@ export default function Home() {
                   크롬 브라우저용 확장 프로그램
                 </p>
               </div>
-            </a>
+            </motion.a>
 
-            <a
+            <motion.a
               href="https://store.whale.naver.com/detail/iifpjpbmgopecnfibfnakgobibghhien"
               target="_blank"
               rel="noopener noreferrer"
               className="flex flex-col items-start gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              {...getCardHover()}
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
                 <Image
@@ -1025,19 +1097,24 @@ export default function Home() {
                   네이버 웨일 브라우저용 확장 앱
                 </p>
               </div>
-            </a>
+            </motion.a>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mx-auto mt-16 max-w-5xl" id="features">
+        <motion.section
+          className="mx-auto mt-16 max-w-5xl"
+          id="features"
+          {...getRevealMotion(0.1)}
+        >
           <h3 className="mb-6 text-center text-2xl font-bold text-heading dark:text-white">
             무엇을 분석하나요?
           </h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {featureCards.map((feature) => (
-              <div
+              <motion.div
                 key={feature.title}
                 className="card flex h-full flex-col gap-4 p-6"
+                {...getCardHover()}
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-primary dark:bg-indigo-500/20">
                   {feature.icon}
@@ -1048,12 +1125,16 @@ export default function Home() {
                 <p className="text-sm text-text-light dark:text-gray-300">
                   {feature.description}
                 </p>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mx-auto mt-16 max-w-5xl" id="testimonials">
+        <motion.section
+          className="mx-auto mt-16 max-w-5xl"
+          id="testimonials"
+          {...getRevealMotion(0.12)}
+        >
           <h3 className="mb-6 text-center text-2xl font-bold text-heading dark:text-white">
             베타 사용자의 피드백
           </h3>
@@ -1062,9 +1143,10 @@ export default function Home() {
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {testimonialCards.map((testimonial) => (
-              <div
+              <motion.div
                 key={testimonial.name}
                 className="card flex h-full flex-col gap-4 p-5"
+                {...getCardHover()}
               >
                 <p className="text-sm text-text dark:text-gray-100">
                   &ldquo;{testimonial.quote}&rdquo;
@@ -1080,12 +1162,16 @@ export default function Home() {
                     {testimonial.outcome}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mx-auto mt-16 max-w-5xl" id="comparison">
+        <motion.section
+          className="mx-auto mt-16 max-w-5xl"
+          id="comparison"
+          {...getRevealMotion(0.14)}
+        >
           <h3 className="mb-4 text-center text-2xl font-bold text-heading dark:text-white">
             수동 점검과 무엇이 다른가요?
           </h3>
@@ -1125,17 +1211,22 @@ export default function Home() {
               </tbody>
             </table>
           </div>
-        </section>
+        </motion.section>
 
-        <section id="workflow" className="mx-auto mt-16 max-w-5xl">
+        <motion.section
+          id="workflow"
+          className="mx-auto mt-16 max-w-5xl"
+          {...getRevealMotion(0.16)}
+        >
           <h3 className="mb-6 text-center text-2xl font-bold text-heading dark:text-white">
             3단계로 끝나는 분석
           </h3>
           <div className="grid gap-4 md:grid-cols-3">
             {workflowSteps.map((step) => (
-              <div
+              <motion.div
                 key={step.number}
                 className="card flex h-full flex-col items-start gap-3 p-5 text-left"
+                {...getCardHover()}
               >
                 <span className="text-sm font-semibold uppercase text-primary">
                   {step.number}
@@ -1146,13 +1237,20 @@ export default function Home() {
                 <p className="text-sm text-text-light dark:text-gray-300">
                   {step.description}
                 </p>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mx-auto mt-16 max-w-4xl" id="contact">
-          <div className="card flex flex-col items-start gap-4 p-6 md:flex-row md:items-center md:justify-between">
+        <motion.section
+          className="mx-auto mt-16 max-w-4xl"
+          id="contact"
+          {...getRevealMotion(0.18)}
+        >
+          <motion.div
+            className="card flex flex-col items-start gap-4 p-6 md:flex-row md:items-center md:justify-between"
+            {...getCardHover()}
+          >
             <div>
               <h4 className="text-xl font-bold text-heading dark:text-white">
                 지금 바로 의심 이메일을 점검하세요
@@ -1167,12 +1265,17 @@ export default function Home() {
                 무료로 시작하기
               </a>
             </div>
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
       </div>
 
       {shouldShowFloatingCTA && (
-        <div className="fixed bottom-6 left-0 right-0 z-40 px-4 sm:px-6 md:px-8">
+        <motion.div
+          className="fixed bottom-6 left-0 right-0 z-40 px-4 sm:px-6 md:px-8"
+          initial={shouldReduceMotion ? undefined : { opacity: 0, y: 20 }}
+          animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+          transition={shouldReduceMotion ? undefined : { duration: 0.32 }}
+        >
           <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl bg-white/95 p-4 shadow-custom backdrop-blur dark:bg-gray-900/95 dark:shadow-custom-dark sm:flex-row sm:items-center">
             <div className="flex-1">
               <p className="text-sm font-semibold text-heading dark:text-white">
@@ -1207,7 +1310,7 @@ export default function Home() {
               </svg>
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
       <Footer />

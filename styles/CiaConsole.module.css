@@ -1,0 +1,237 @@
+.consolePage {
+  --hud-bg: #030916;
+  --hud-bg-soft: #071327;
+  --hud-cyan: #4feaff;
+  --hud-cyan-soft: rgba(79, 234, 255, 0.35);
+  --hud-amber: #ffd866;
+  --hud-panel: rgba(5, 22, 44, 0.8);
+  --hud-panel-strong: rgba(9, 33, 62, 0.9);
+  --hud-border: rgba(79, 234, 255, 0.28);
+  position: relative;
+  isolation: isolate;
+  color: #d8f7ff;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(79, 234, 255, 0.16), transparent 34%),
+    radial-gradient(circle at 88% 8%, rgba(255, 216, 102, 0.12), transparent 30%),
+    linear-gradient(150deg, #02050c 0%, var(--hud-bg) 55%, #020a18 100%);
+  font-family: var(--font-rajdhani), "IBM Plex Sans KR", "Noto Sans KR", sans-serif;
+}
+
+.gridBackdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.26;
+  background-image:
+    linear-gradient(rgba(79, 234, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79, 234, 255, 0.08) 1px, transparent 1px);
+  background-size: 46px 46px, 46px 46px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 90%);
+  animation: gridDrift 20s linear infinite;
+}
+
+.headerBar {
+  position: relative;
+  z-index: 1;
+  border-bottom: 1px solid var(--hud-border);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(79, 234, 255, 0.14) 0%,
+      rgba(9, 33, 62, 0.86) 32%,
+      rgba(9, 33, 62, 0.9) 68%,
+      rgba(255, 216, 102, 0.1) 100%
+    ) !important;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.brandTitle {
+  font-family: var(--font-orbitron), var(--font-rajdhani), sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hud-cyan);
+  text-shadow: 0 0 18px rgba(79, 234, 255, 0.45);
+  cursor: pointer;
+}
+
+.consoleContainer {
+  position: relative;
+  z-index: 1;
+  max-width: 1240px;
+}
+
+.commandStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--hud-border);
+  border-radius: 10px;
+  background: linear-gradient(
+    120deg,
+    rgba(9, 33, 62, 0.78) 0%,
+    rgba(5, 22, 44, 0.9) 100%
+  );
+  box-shadow: inset 0 0 24px rgba(79, 234, 255, 0.08);
+}
+
+.stripLabel {
+  font-family: var(--font-orbitron), var(--font-rajdhani), sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  color: rgba(169, 231, 244, 0.74);
+  text-transform: uppercase;
+}
+
+.stripValue {
+  font-family: var(--font-orbitron), var(--font-rajdhani), sans-serif;
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  color: #f1fbff;
+  text-shadow: 0 0 10px rgba(79, 234, 255, 0.35);
+}
+
+.hudPanel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--hud-border);
+  background: linear-gradient(
+    160deg,
+    var(--hud-panel-strong) 0%,
+    var(--hud-panel) 100%
+  ) !important;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.38),
+    inset 0 0 18px rgba(79, 234, 255, 0.08) !important;
+  backdrop-filter: blur(6px);
+  animation: panelReveal 420ms ease-out;
+}
+
+.hudPanel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--hud-cyan) 25%,
+    var(--hud-amber) 55%,
+    transparent 100%
+  );
+  opacity: 0.9;
+}
+
+.hudPanel :global(h1),
+.hudPanel :global(h2),
+.hudPanel :global(h3),
+.hudPanel :global(summary),
+.hudPanel :global(th) {
+  font-family: var(--font-orbitron), var(--font-rajdhani), sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #90f3ff !important;
+}
+
+.hudPanel :global(.text-gray-500),
+.hudPanel :global(.text-gray-600),
+.hudPanel :global(.text-gray-700) {
+  color: #a7d8e4 !important;
+}
+
+.hudPanel :global([class*="bg-gray-"]),
+.hudPanel :global([class*="bg-blue-50"]),
+.hudPanel :global([class*="bg-yellow-50"]),
+.hudPanel :global([class*="bg-red-50"]) {
+  background: rgba(10, 33, 59, 0.64) !important;
+}
+
+.hudPanel :global([class*="border-gray-"]),
+.hudPanel :global([class*="border-blue-"]),
+.hudPanel :global([class*="border-red-"]),
+.hudPanel :global([class*="border-yellow-"]) {
+  border-color: rgba(79, 234, 255, 0.24) !important;
+}
+
+.hudPanel :global(button) {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hudPanel :global(button:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 0 14px rgba(79, 234, 255, 0.25);
+}
+
+.statusAlert {
+  border: 1px solid var(--hud-border);
+  background: linear-gradient(
+    90deg,
+    rgba(79, 234, 255, 0.12) 0%,
+    rgba(5, 22, 44, 0.82) 100%
+  ) !important;
+  color: #bff5ff !important;
+}
+
+.routePanel {
+  border-color: rgba(255, 216, 102, 0.35);
+}
+
+.routeItem {
+  border: 1px solid rgba(79, 234, 255, 0.22);
+  background: rgba(8, 29, 52, 0.62) !important;
+}
+
+.toggleDetailButton {
+  font-family: var(--font-orbitron), var(--font-rajdhani), sans-serif;
+  letter-spacing: 0.08em;
+  color: var(--hud-cyan) !important;
+}
+
+.routePanel :global(table) {
+  border: 1px solid rgba(79, 234, 255, 0.26);
+}
+
+.routePanel :global(thead tr) {
+  background: rgba(16, 46, 80, 0.92) !important;
+}
+
+.routePanel :global(td),
+.routePanel :global(th) {
+  border-color: rgba(79, 234, 255, 0.2);
+}
+
+@keyframes panelReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gridDrift {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 46px 46px, 46px 46px;
+  }
+}
+
+@media (max-width: 768px) {
+  .brandTitle {
+    font-size: 0.84rem;
+    letter-spacing: 0.09em;
+  }
+
+  .commandStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

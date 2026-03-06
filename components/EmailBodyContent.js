@@ -8,6 +8,7 @@ const EmailBodyContent = ({
   onCheckUrl,
   failedDomains = [],
   analyzedTargets = {},
+  className = "",
 }) => {
   const [tab, setTab] = useState("ai");
 
@@ -246,7 +247,9 @@ const EmailBodyContent = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
+    <div
+      className={`bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6 ${className}`}
+    >
       <h2 className="text-xl font-bold mb-4">이메일 내용</h2>
 
       <div className="flex border-b mb-4 overflow-x-auto">

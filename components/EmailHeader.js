@@ -3,18 +3,22 @@ import { format } from "date-fns";
 import RiskBadge from "./RiskBadge";
 import { countryCodeToFlag } from "../utils/emailAnalyzer";
 
-const EmailHeader = ({ emailData }) => {
+const EmailHeader = ({ emailData, className = "" }) => {
   const [showRawData, setShowRawData] = useState(false);
 
   if (!emailData) return <div>데이터 로딩 중...</div>;
 
-  const { from, to, subject, date, risk, id, timestamp, country, countryCode } =
+  const { from, subject, date, risk, id, timestamp, country, countryCode } =
     emailData;
+  const hasRawData =
+    typeof emailData.rawData === "string" && emailData.rawData.trim().length > 0;
 
   const formattedDate = date ? new Date(date) : new Date(timestamp);
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6">
+    <div
+      className={`bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6 ${className}`}
+    >
       <h1 className="text-2xl font-bold mb-4 break-words">
         {subject || "(제목 없음)"}
       </h1>
@@ -31,14 +35,20 @@ const EmailHeader = ({ emailData }) => {
           </div>
         )}
 
-        <div className="ml-auto">
-          <button
-            onClick={() => setShowRawData(!showRawData)}
-            className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded"
-          >
-            {showRawData ? "원문 닫기" : "원문 내용 보기"}
-          </button>
-        </div>
+        {hasRawData ? (
+          <div className="ml-auto">
+            <button
+              onClick={() => setShowRawData(!showRawData)}
+              className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded"
+            >
+              {showRawData ? "원문 닫기" : "원문 내용 보기"}
+            </button>
+          </div>
+        ) : (
+          <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+            개인정보 보호를 위해 원문은 결과 데이터에 포함되지 않습니다.
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -57,10 +67,10 @@ const EmailHeader = ({ emailData }) => {
         <div>분석 시간: {format(formattedDate, "yyyy-MM-dd HH:mm:ss")}</div>
       </div>
 
-      {showRawData && (
+      {showRawData && hasRawData && (
         <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-900 rounded overflow-auto max-h-96">
           <pre className="text-xs">
-            {emailData.rawData || "원문 데이터가 없습니다."}
+            {emailData.rawData}
           </pre>
         </div>
       )}

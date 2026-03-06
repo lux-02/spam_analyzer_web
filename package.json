@@ -20,6 +20,7 @@
     "cors": "^2.8.5",
     "date-fns": "^3.5.0",
     "dompurify": "^3.0.10",
+    "framer-motion": "^11.18.2",
     "js-base64": "^3.7.7",
     "leaflet": "^1.9.4",
     "maath": "^0.10.4",
