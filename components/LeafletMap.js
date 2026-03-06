@@ -81,10 +81,10 @@ const LeafletMap = ({ locations }) => {
           center={[loc.latitude, loc.longitude]}
           radius={6}
           pathOptions={{
-            color: "#8ce4ff",
+            color: "#f0f0f2",
             weight: 2,
-            fillColor: "#ffa65a",
-            fillOpacity: 0.95,
+            fillColor: "#ff304a",
+            fillOpacity: 0.92,
           }}
         >
           <Popup>
@@ -111,15 +111,15 @@ const LeafletMap = ({ locations }) => {
         <>
           <Polyline
             positions={pathCoordinates}
-            color="#ff8d42"
+            color="#ff304a"
             weight={3.5}
-            opacity={0.86}
+            opacity={0.9}
           />
           <Polyline
             positions={pathCoordinates}
-            color="#79e2ff"
+            color="#d5d5da"
             weight={1.4}
-            opacity={0.9}
+            opacity={0.84}
             dashArray="6 8"
           />
         </>
