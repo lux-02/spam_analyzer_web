@@ -119,7 +119,8 @@ export default async function handler(req, res) {
     };
 
     const payload = encodeAnalysisPayload(finalResult);
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://darkwinterlab.com";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "https://naver.darkwinterlab.com";
     const resultUrl = `${baseUrl}/naver/email/${id}#analysis=${payload}`;
 
     return res.status(200).json({
