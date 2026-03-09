@@ -69,7 +69,7 @@ const EmailHeader = ({ emailData, className = "" }) => {
 
       {showRawData && hasRawData && (
         <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-900 rounded overflow-auto max-h-96">
-          <pre className="text-xs">
+          <pre className="text-xs text-gray-900 dark:text-gray-100">
             {emailData.rawData}
           </pre>
         </div>

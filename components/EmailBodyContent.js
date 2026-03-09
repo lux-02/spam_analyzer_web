@@ -232,7 +232,7 @@ const EmailBodyContent = ({
             <summary className="cursor-pointer text-blue-600 hover:text-blue-800">
               원시 데이터 보기
             </summary>
-            <pre className="mt-2 text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto">
+            <pre className="mt-2 overflow-auto rounded bg-gray-100 p-2 text-xs text-gray-900 dark:bg-gray-800 dark:text-gray-100">
               {reasoning}
             </pre>
           </details>

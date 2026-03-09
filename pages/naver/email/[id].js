@@ -227,6 +227,19 @@ export default function EmailAnalysisResult() {
           },
         };
 
+  const renderStatusState = (content) => (
+    <div
+      className={`min-h-screen ${styles.consolePage} ${orbitron.variable} ${rajdhani.variable}`}
+    >
+      <div className={styles.gridBackdrop} aria-hidden="true" />
+      <div className="flex min-h-screen items-center justify-center px-4 py-10">
+        <div className={`w-full max-w-lg rounded-2xl p-6 ${styles.hudPanel}`}>
+          {content}
+        </div>
+      </div>
+    </div>
+  );
+
   // 초기화 시 로컬 스토리지에서 실패한 도메인 및 캐시된 결과 로드
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -651,54 +664,53 @@ export default function EmailAnalysisResult() {
 
   // 로딩 처리
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <div className="text-2xl font-bold mb-4 text-white">
-            📧 분석 결과 로딩 중...
-          </div>
-          <div className="animate-pulse bg-blue-500 h-1 w-48 rounded-full mx-auto"></div>
+    return renderStatusState(
+      <div className="text-center">
+        <div className="mb-4 text-2xl font-bold text-heading dark:text-white">
+          📧 분석 결과 로딩 중...
         </div>
+        <p className="mb-4 text-sm text-text-light dark:text-gray-400">
+          분석 결과와 위협 인텔리전스 데이터를 불러오고 있습니다.
+        </p>
+        <div className="mx-auto h-1 w-48 animate-pulse rounded-full bg-primary"></div>
       </div>
     );
   }
 
   // 오류 처리
   if (error) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="bg-red-50 border border-red-200 p-6 rounded-lg max-w-lg w-full">
-          <h1 className="text-2xl font-bold text-red-700 mb-4">오류 발생</h1>
-          <p className="text-gray-700 mb-4">{error}</p>
-          <button
-            onClick={() => router.push("/")}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            홈으로 돌아가기
-          </button>
-        </div>
+    return renderStatusState(
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 dark:border-red-800 dark:bg-red-900/20">
+        <h1 className="mb-4 text-2xl font-bold text-red-700 dark:text-red-300">
+          오류 발생
+        </h1>
+        <p className="mb-4 text-text dark:text-gray-200">{error}</p>
+        <button
+          onClick={() => router.push("/")}
+          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        >
+          홈으로 돌아가기
+        </button>
       </div>
     );
   }
 
   // 데이터가 없는 경우
   if (!emailData) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg max-w-lg w-full">
-          <h1 className="text-2xl font-bold text-yellow-700 mb-4">
-            분석 결과 없음
-          </h1>
-          <p className="text-gray-700 mb-4">
-            해당 ID의 분석 결과를 찾을 수 없습니다. 서버 비저장 정책으로 인해 브라우저 세션이 종료되면 결과가 사라질 수 있습니다.
-          </p>
-          <button
-            onClick={() => router.push("/")}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            홈으로 돌아가기
-          </button>
-        </div>
+    return renderStatusState(
+      <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-6 dark:border-yellow-800 dark:bg-yellow-900/20">
+        <h1 className="mb-4 text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+          분석 결과 없음
+        </h1>
+        <p className="mb-4 text-text dark:text-gray-200">
+          해당 ID의 분석 결과를 찾을 수 없습니다. 서버 비저장 정책으로 인해 브라우저 세션이 종료되면 결과가 사라질 수 있습니다.
+        </p>
+        <button
+          onClick={() => router.push("/")}
+          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        >
+          홈으로 돌아가기
+        </button>
       </div>
     );
   }
@@ -713,7 +725,7 @@ export default function EmailAnalysisResult() {
         <meta name="description" content="네이버 이메일 스팸/피싱 분석 결과" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <header className={`${styles.headerBar} text-white p-4 shadow-md mb-6`}>
+      <header className={`${styles.headerBar} p-4 shadow-md mb-6`}>
         <div className="container mx-auto">
           <div className="flex items-center justify-between">
             <h1
