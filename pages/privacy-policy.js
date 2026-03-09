@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import Footer from "../components/ui/Footer";
+import ThemeToggle from "../components/ui/ThemeToggle";
 
 const effectiveDate = "2026년 3월 9일 (March 9, 2026)";
 const contactEmail = "darkwinterlab@gmail.com";
@@ -303,6 +304,7 @@ export default function PrivacyPolicy() {
               📧 NAVER MAIL ANALYZER
             </h1>
           </Link>
+          <ThemeToggle />
         </div>
 
         <div className="bg-white dark:bg-box shadow-custom rounded-xl p-6 w-full max-w-5xl mx-auto mb-8">

@@ -3,13 +3,16 @@ import { useTheme } from "../../context/ThemeContext";
 
 const ThemeToggle = ({ className = "" }) => {
   const { theme, toggleTheme } = useTheme();
+  const nextTheme = theme === "light" ? "dark" : "light";
 
   return (
     <button
+      type="button"
       onClick={toggleTheme}
-      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      aria-label={`${nextTheme} mode로 전환`}
+      aria-pressed={theme === "dark"}
       className={`p-2 rounded-lg bg-gray-100 dark:bg-box-light hover:bg-gray-200 dark:hover:bg-box transition-colors duration-200 ${className}`}
-      title={`${theme === "light" ? "다크 모드로 전환" : "라이트 모드로 전환"}`}
+      title={nextTheme === "dark" ? "다크 모드로 전환" : "라이트 모드로 전환"}
     >
       <div className="relative">
         {/* 태양 아이콘 (라이트 모드 활성화 상태) */}

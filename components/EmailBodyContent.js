@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import DOMPurify from "dompurify";
 import { extractDomain } from "../utils/emailAnalyzer";
 import VirusTotalButton from "./VirusTotalButton";
+import { useTheme } from "../context/ThemeContext";
 
 const EmailBodyContent = ({
   emailData,
@@ -11,6 +12,15 @@ const EmailBodyContent = ({
   className = "",
 }) => {
   const [tab, setTab] = useState("ai");
+  const { theme } = useTheme();
+  const isDarkTheme = theme === "dark";
+  const previewBackground = isDarkTheme ? "#0f1115" : "#ffffff";
+  const previewText = isDarkTheme ? "#e5e7eb" : "#111827";
+  const previewHeading = isDarkTheme ? "#f8fafc" : "#1f2937";
+  const previewBorder = isDarkTheme ? "#374151" : "#e5e7eb";
+  const previewTableHead = isDarkTheme ? "#161b22" : "#f9fafb";
+  const previewLink = isDarkTheme ? "#fb7185" : "#d21837";
+  const previewLinkHover = isDarkTheme ? "#fda4af" : "#b1152d";
 
   if (!emailData) return null;
 
@@ -85,27 +95,28 @@ const EmailBodyContent = ({
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           line-height: 1.6;
           margin: 20px;
-          background: white;
-          color: #111827;
+          background: ${previewBackground};
+          color: ${previewText};
           font-size: 14px;
         }
         a { 
-          color: #3b82f6; 
+          color: ${previewLink}; 
           text-decoration: underline; 
         }
         a:hover { 
-          color: #1d4ed8; 
+          color: ${previewLinkHover}; 
         }
         pre { 
           white-space: pre-wrap; 
           word-wrap: break-word; 
           font-family: inherit;
           margin: 0;
+          color: inherit;
         }
         h1, h2, h3, h4, h5, h6 {
           margin-top: 1em;
           margin-bottom: 0.5em;
-          color: #1f2937;
+          color: ${previewHeading};
         }
         p {
           margin-bottom: 1em;
@@ -116,12 +127,12 @@ const EmailBodyContent = ({
           margin: 1em 0;
         }
         td, th {
-          border: 1px solid #e5e7eb;
+          border: 1px solid ${previewBorder};
           padding: 8px;
           text-align: left;
         }
         th {
-          background-color: #f9fafb;
+          background-color: ${previewTableHead};
           font-weight: bold;
         }
       </style>
@@ -315,7 +326,7 @@ const EmailBodyContent = ({
               title="Email Content Preview"
               className="w-full min-h-[300px] border-0 rounded"
               sandbox="allow-same-origin allow-scripts"
-              style={{ background: "white" }}
+              style={{ background: previewBackground }}
             />
           </div>
         </div>

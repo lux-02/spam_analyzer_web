@@ -1,57 +1,103 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-// 테마 컨텍스트 생성
 const ThemeContext = createContext();
+const THEME_STORAGE_KEY = "theme";
 
-// 테마 제공자 컴포넌트
+const applyTheme = (theme) => {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const root = document.documentElement;
+  root.classList.remove("light", "dark");
+  root.classList.add(theme);
+  root.dataset.theme = theme;
+  root.style.colorScheme = theme;
+};
+
+const getStoredOrPreferredTheme = () => {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (storedTheme === "light" || storedTheme === "dark") {
+    return storedTheme;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+};
+
+const getInitialTheme = () => {
+  if (typeof document === "undefined") {
+    return "light";
+  }
+
+  const documentTheme = document.documentElement.dataset.theme;
+  if (documentTheme === "light" || documentTheme === "dark") {
+    return documentTheme;
+  }
+
+  return "light";
+};
+
 export const ThemeProvider = ({ children }) => {
-  // 테마 상태 ('light' 또는 'dark')
-  const [theme, setTheme] = useState("light"); // 기본값을 'light'로 설정
+  const [theme, setTheme] = useState(getInitialTheme);
 
-  // 브라우저에서 실행될 때만 localStorage 확인
   useEffect(() => {
-    // 저장된 테마가 있으면 사용, 없으면 light 사용
-    const savedTheme = localStorage.getItem("theme");
-    // 저장된 테마가 없으면 기본값으로 light 저장
-    if (!savedTheme) {
-      localStorage.setItem("theme", "light");
-    }
-
-    const themeToUse = savedTheme || "light";
-    setTheme(themeToUse);
-
-    if (themeToUse === "dark") {
-      document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
-    } else {
-      document.documentElement.classList.add("light");
-      document.documentElement.classList.remove("dark");
-    }
+    const nextTheme = getStoredOrPreferredTheme();
+    setTheme(nextTheme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    applyTheme(nextTheme);
   }, []);
 
-  // 테마 전환 함수
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
-    } else {
-      document.documentElement.classList.add("light");
-      document.documentElement.classList.remove("dark");
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
     }
-  };
+
+    const handleStorage = (event) => {
+      if (event.key !== THEME_STORAGE_KEY) {
+        return;
+      }
+
+      const nextTheme = event.newValue === "dark" ? "dark" : "light";
+      setTheme(nextTheme);
+      applyTheme(nextTheme);
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((currentTheme) => {
+      const nextTheme = currentTheme === "light" ? "dark" : "light";
+      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      applyTheme(nextTheme);
+      return nextTheme;
+    });
+  }, []);
+
+  const value = useMemo(
+    () => ({ theme, toggleTheme }),
+    [theme, toggleTheme]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 };
 
-// 테마 사용을 위한 커스텀 훅
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {

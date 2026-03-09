@@ -8,13 +8,22 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { countryCodeToFlag } from "../utils/emailAnalyzer";
+import { useTheme } from "../context/ThemeContext";
 
 const LeafletMap = ({ locations }) => {
+  const { theme } = useTheme();
   // 맵 고유 ID를 메모이제이션하여 재렌더링 시에도 유지
   const mapId = useMemo(
     () => `map-${Math.random().toString(36).substring(2, 10)}`,
     []
   );
+  const isDarkTheme = theme === "dark";
+  const tileUrl = isDarkTheme
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  const markerStroke = isDarkTheme ? "#f0f0f2" : "#111827";
+  const markerFill = "#ff304a";
+  const traceSecondary = isDarkTheme ? "#d5d5da" : "#475569";
 
   // Leaflet 마커 아이콘 이슈 해결을 위한 코드
   useEffect(() => {
@@ -61,7 +70,7 @@ const LeafletMap = ({ locations }) => {
       scrollWheelZoom={false}
       style={{ height: "100%", width: "100%" }}
       id={mapId}
-      key={mapId}
+      key={`${mapId}-${theme}`}
       className="z-0"
       whenCreated={(mapInstance) => {
         // 맵 인스턴스 생성 후 처리
@@ -71,7 +80,7 @@ const LeafletMap = ({ locations }) => {
       }}
     >
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url={tileUrl}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
       />
 
@@ -81,9 +90,9 @@ const LeafletMap = ({ locations }) => {
           center={[loc.latitude, loc.longitude]}
           radius={6}
           pathOptions={{
-            color: "#f0f0f2",
+            color: markerStroke,
             weight: 2,
-            fillColor: "#ff304a",
+            fillColor: markerFill,
             fillOpacity: 0.92,
           }}
         >
@@ -111,13 +120,13 @@ const LeafletMap = ({ locations }) => {
         <>
           <Polyline
             positions={pathCoordinates}
-            color="#ff304a"
+            color={markerFill}
             weight={3.5}
             opacity={0.9}
           />
           <Polyline
             positions={pathCoordinates}
-            color="#d5d5da"
+            color={traceSecondary}
             weight={1.4}
             opacity={0.84}
             dashArray="6 8"
