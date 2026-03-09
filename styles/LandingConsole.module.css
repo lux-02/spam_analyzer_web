@@ -28,16 +28,18 @@
     rgba(255, 241, 243, 0.9) 0%,
     rgba(255, 255, 255, 0.98) 100%
   );
+  --landing-danger-value: #ab1230;
+  --landing-danger-body: #475569;
   --landing-border: rgba(15, 23, 42, 0.12);
   --landing-border-strong: rgba(15, 23, 42, 0.22);
   --landing-text: #101826;
   --landing-title: #0b1220;
-  --landing-muted: #5b6678;
-  --landing-soft-text: #3d4756;
+  --landing-muted: #3f4d5f;
+  --landing-soft-text: #263244;
   --landing-accent: #d21837;
   --landing-accent-soft: rgba(210, 24, 55, 0.18);
-  --landing-accent-faint: rgba(210, 24, 55, 0.08);
-  --landing-accent-contrast: #fff5f7;
+  --landing-accent-faint: rgba(210, 24, 55, 0.12);
+  --landing-accent-contrast: #7f1022;
   --landing-grid: rgba(15, 23, 42, 0.06);
   --landing-glow-accent: rgba(210, 24, 55, 0.12);
   --landing-glow-neutral: rgba(15, 23, 42, 0.08);
@@ -97,6 +99,8 @@
     rgba(44, 15, 19, 0.76) 0%,
     rgba(15, 15, 18, 0.96) 100%
   );
+  --landing-danger-value: #fff5f7;
+  --landing-danger-body: #d7d7dc;
   --landing-border: rgba(222, 222, 228, 0.18);
   --landing-border-strong: rgba(255, 255, 255, 0.28);
   --landing-text: #f5f5f7;
@@ -172,7 +176,8 @@
 
 .navLink {
   border: 1px solid transparent;
-  color: var(--landing-muted);
+  color: var(--landing-soft-text);
+  font-weight: 700;
 }
 
 .navLink:hover {
@@ -242,6 +247,7 @@
   padding: 0.4rem 0.8rem;
   background: var(--landing-accent-faint);
   color: var(--landing-accent-contrast);
+  box-shadow: 0 8px 18px rgba(210, 24, 55, 0.08);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -282,12 +288,21 @@
 }
 
 .previewMeta {
-  color: var(--landing-muted);
+  color: var(--landing-soft-text);
+  font-weight: 700;
 }
 
 .previewDanger {
   border: 1px solid var(--landing-accent-soft);
   background: var(--landing-danger-gradient);
+}
+
+.previewDangerValue {
+  color: var(--landing-danger-value);
+}
+
+.previewDangerBody {
+  color: var(--landing-danger-body);
 }
 
 .previewListItem {
@@ -320,7 +335,7 @@
   font-family: var(--font-orbitron), var(--font-rajdhani), sans-serif;
   font-size: 0.65rem;
   letter-spacing: 0.08em;
-  color: var(--landing-muted);
+  color: var(--landing-soft-text);
   text-transform: uppercase;
 }
 
@@ -379,6 +394,7 @@
   border-radius: 999px;
   background: var(--landing-accent-faint);
   color: var(--landing-accent-contrast);
+  box-shadow: 0 8px 18px rgba(210, 24, 55, 0.08);
 }
 
 .stepMuted {

@@ -750,10 +750,10 @@ export default function Home() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
                     위험 지수
                   </p>
-                  <p className="mt-1 text-3xl font-bold text-white">
+                  <p className={`mt-1 text-3xl font-bold ${styles.previewDangerValue}`}>
                     82% · 고위험
                   </p>
-                  <p className="mt-2 text-sm text-text-light">
+                  <p className={`mt-2 text-sm ${styles.previewDangerBody}`}>
                     SPF 실패, 위장 Reply-To, 고위험 링크 2건 탐지
                   </p>
                 </div>
