@@ -582,7 +582,7 @@ export default function Home() {
       </Head>
 
       <div className={`container mx-auto px-4 py-8 ${styles.contentWrap}`}>
-        <header className={styles.headerBar}>
+        <header className={`${styles.mainSection} ${styles.headerBar}`}>
           <div className="flex items-center justify-between gap-3">
             <Link
               href="/naver"
@@ -696,7 +696,7 @@ export default function Home() {
 
         <motion.section
           {...getRevealMotion(0)}
-          className="mb-14 space-y-8"
+          className={`mb-14 space-y-8 ${styles.mainSection}`}
         >
           <div className={styles.heroShell}>
             <div className={styles.heroGrid}>
@@ -806,7 +806,7 @@ export default function Home() {
         <motion.section
           id="analyze"
           {...getRevealMotion(0.06)}
-          className={`relative mx-auto w-full max-w-6xl overflow-hidden p-6 focus-within:ring-2 focus-within:ring-primary/20 md:p-10 ${styles.analyzeShell}`}
+          className={`relative overflow-hidden p-6 focus-within:ring-2 focus-within:ring-primary/20 md:p-10 ${styles.mainSection} ${styles.analyzeShell}`}
         >
           <div
             className={styles.analyzeHaloLeft}
@@ -1102,7 +1102,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
+          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
           id="extensions"
           {...getRevealMotion(0.08)}
         >
@@ -1169,7 +1169,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
+          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
           id="features"
           {...getRevealMotion(0.1)}
         >
@@ -1198,7 +1198,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
+          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
           id="testimonials"
           {...getRevealMotion(0.12)}
         >
@@ -1235,7 +1235,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
+          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
           id="comparison"
           {...getRevealMotion(0.14)}
         >
@@ -1282,7 +1282,7 @@ export default function Home() {
 
         <motion.section
           id="workflow"
-          className={`mx-auto mt-16 max-w-5xl ${styles.sectionShell}`}
+          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
           {...getRevealMotion(0.16)}
         >
           <h3 className="mb-6 text-center text-2xl font-bold text-heading dark:text-white">
@@ -1310,7 +1310,7 @@ export default function Home() {
         </motion.section>
 
         <motion.section
-          className={`mx-auto mt-16 max-w-4xl ${styles.sectionShell}`}
+          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
           id="contact"
           {...getRevealMotion(0.18)}
         >
