@@ -2,8 +2,7 @@
 
 이메일 원문을 분석하여 스팸/피싱 여부를 분석하는 웹 애플리케이션입니다.
 
-**🌐 라이브 데모**: [https://darkwinterlab.com](https://darkwinterlab.com)  
-**🤖 MCP API**: [https://darkwinterlab.com/mcp/](https://darkwinterlab.com/mcp/)
+**🌐 라이브 데모**: [https://naver.darkwinterlab.com](https://naver.darkwinterlab.com)
 
 ## 기능
 
@@ -36,7 +35,9 @@ LLM 분석(이메일 의도 분석)을 사용하려면 서버 환경변수에 `O
 ### 개인정보/저장 정책
 
 - 분석 결과(이메일 원문 포함)는 서버 데이터베이스에 저장하지 않습니다.
-- 분석 결과는 브라우저 세션(`sessionStorage`)과 URL Fragment(`#analysis=...`)를 통해서만 전달/조회됩니다.
+- 웹앱은 분석 결과를 브라우저 `sessionStorage`에 저장한 뒤 결과 페이지로 이동합니다.
+- 확장앱은 결과 페이지를 열고 같은 브라우저 세션에 분석 결과를 전달합니다.
+- URL만 복사해도 다른 브라우저나 다른 세션에서 동일 결과가 재현되지 않도록 설계했습니다.
 - 브라우저 세션 종료 또는 저장 데이터 삭제 시 결과는 복구되지 않습니다.
 
 ### 설치 및 실행 방법

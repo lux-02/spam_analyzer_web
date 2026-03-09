@@ -28,11 +28,6 @@ function runMiddleware(req, res, fn) {
   });
 }
 
-function encodeAnalysisPayload(payload) {
-  const json = JSON.stringify(payload);
-  return Buffer.from(json, "utf8").toString("base64url");
-}
-
 export default async function handler(req, res) {
   await runMiddleware(req, res, cors);
 
@@ -118,14 +113,13 @@ export default async function handler(req, res) {
       id,
     };
 
-    const payload = encodeAnalysisPayload(finalResult);
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL || "https://naver.darkwinterlab.com";
-    const resultUrl = `${baseUrl}/naver/email/${id}#analysis=${payload}`;
+    const resultUrl = `${baseUrl}/naver/email/${id}`;
 
     return res.status(200).json({
       success: true,
-      storage: "none",
+      storage: "session-only",
       id,
       resultUrl,
       result: finalResult,

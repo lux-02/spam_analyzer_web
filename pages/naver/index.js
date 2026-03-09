@@ -68,7 +68,7 @@ export default function Home() {
     }
 
     if (!dataConsent) {
-      setError("외부 분석 API 처리 및 개인정보 처리방침에 동의해주세요.");
+      setError("개인정보 처리 고지사항을 확인하고 동의해주세요.");
       return;
     }
 
@@ -304,18 +304,18 @@ export default function Home() {
 
   const trustPoints = [
     {
-      title: "최소한의 수집",
+      title: "서버 DB 비보관",
       description:
-        "분석 데이터는 서버에 저장하지 않고, 사용자 브라우저 세션에서만 결과를 확인합니다.",
+        "분석 요청 시 이메일 원문과 파생 보안 정보가 일시 처리될 수 있지만, 일반 분석 경로에서는 서버 DB에 영구 저장하지 않으며 결과는 동일 브라우저 세션에서만 확인되도록 전달합니다.",
     },
     {
       title: "암호화 전송",
       description: "모든 데이터는 TLS로 암호화된 통신 구간에서 처리됩니다.",
     },
     {
-      title: "투명한 처리",
+      title: "외부 공개 방지",
       description:
-        "개인정보 처리방침에서 수집 항목과 보관 정책을 누구나 확인할 수 있습니다.",
+        "분석한 메일 원문과 전체 결과를 공개 페이지나 검색 노출 대상으로 운영하지 않으며, 결과는 요청한 브라우저 세션에서 우선 확인합니다.",
     },
   ];
 
@@ -328,7 +328,7 @@ export default function Home() {
     {
       question: "분석한 데이터는 저장되나요?",
       answer:
-        "아니요. 분석 결과는 서버에 저장하지 않으며, 분석 직후 사용자 브라우저 세션에서만 확인할 수 있습니다.",
+        "분석 요청 시 이메일 원문과 파생 정보는 분석 목적 범위에서 일시 처리될 수 있습니다. 다만 일반 분석 경로에서는 서버 DB에 영구 저장하지 않으며, 결과는 동일 브라우저 세션 중심으로 확인하도록 설계했습니다.",
     },
     {
       question: "기업용 커스텀 규칙을 적용할 수 있나요?",
@@ -345,6 +345,30 @@ export default function Home() {
   const analysisTips = [
     "제목과 발신자 정보까지 포함된 전체 원문을 붙여넣어 주세요.",
     "특수문자나 공백이 삭제되지 않도록 평문 모드로 복사하면 정확도가 높아집니다.",
+  ];
+
+  const consentSummaryItems = [
+    {
+      label: "처리 목적",
+      value: "이메일 스팸·피싱 분석, 위험도 산정, 결과 페이지 제공",
+    },
+    {
+      label: "처리 항목",
+      value: "메일 원문, 헤더/본문, 링크·첨부·IP 등 분석에 필요한 정보",
+    },
+    {
+      label: "외부 연동",
+      value: "OpenAI(본문 의도 분석), ipwho.is(IP 위치), VirusTotal(URL/IP 평판)",
+    },
+    {
+      label: "보유 기간",
+      value:
+        "서버 DB에는 영구 저장하지 않으며, 결과는 같은 브라우저 세션 중심으로 확인",
+    },
+    {
+      label: "거부권",
+      value: "동의를 거부할 수 있으나 상세 분석 기능은 이용할 수 없습니다.",
+    },
   ];
 
   const troubleshootingTips = [
@@ -929,27 +953,46 @@ export default function Home() {
                 className={`rounded-2xl p-4 ${styles.consentCard}`}
                 {...getRevealMotion(0.14, 16)}
               >
-                <div className="flex items-start gap-3">
-                  <input
-                    id="dataConsent"
-                    type="checkbox"
-                    checked={dataConsent}
-                    onChange={(e) => setDataConsent(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <label
-                    htmlFor="dataConsent"
-                    className="text-xs text-text-light dark:text-gray-300"
-                  >
-                    외부 분석 API(OpenAI/VirusTotal) 처리 및 개인정보 처리방침에 동의합니다.
-                    <Link
-                      href="/privacy-policy"
-                      className="ml-2 text-primary hover:underline"
-                      target="_blank"
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-primary/15 bg-white/50 p-3 text-[11px] leading-5 text-text-light dark:border-primary/20 dark:bg-white/5 dark:text-gray-300">
+                    {consentSummaryItems.map((item) => (
+                      <p key={item.label}>
+                        <span className="font-semibold text-heading dark:text-white">
+                          {item.label}
+                        </span>
+                        {": "}
+                        <span>{item.value}</span>
+                      </p>
+                    ))}
+                    <p className="pt-1 text-[10px] text-text-light dark:text-gray-400">
+                      민감정보, 주민등록번호 등 불필요한 식별정보는 가능한 경우
+                      가린 뒤 제출해 주세요.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <input
+                      id="dataConsent"
+                      type="checkbox"
+                      checked={dataConsent}
+                      onChange={(e) => setDataConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label
+                      htmlFor="dataConsent"
+                      className="text-xs text-text-light dark:text-gray-300"
                     >
-                      개인정보 처리방침
-                    </Link>
-                  </label>
+                      위 고지사항을 확인했고, 메일 분석을 위한 개인정보 처리에
+                      동의합니다.
+                      <Link
+                        href="/privacy-policy"
+                        className="ml-2 text-primary hover:underline"
+                        target="_blank"
+                      >
+                        개인정보 처리방침
+                      </Link>
+                    </label>
+                  </div>
                 </div>
               </motion.div>
 
@@ -964,7 +1007,9 @@ export default function Home() {
               </button>
               <p className="text-xs text-text-light dark:text-gray-400">
                 첨부 파일이나 링크를 열기 전에 결과를 확인하세요. 붙여넣은
-                원문은 서버 DB에 저장하지 않고 분석 처리에만 사용됩니다.
+                원문은 분석 요청 시 일시 처리되며, 일반 분석 경로에서는 서버
+                DB에 영구 저장하지 않습니다. 결과는 같은 브라우저 세션에서만
+                다시 열 수 있습니다.
               </p>
             </form>
 

@@ -23,6 +23,7 @@ import styles from "@/styles/CiaConsole.module.css";
 const FAILED_DOMAINS_KEY = "vtFailedDomains";
 const VT_RESULTS_CACHE_KEY = "vtResultsCache";
 const ANALYSIS_SESSION_KEY_PREFIX = "analysisResult:";
+const ANALYSIS_READY_EVENT = "darkwinterlab:analysis-ready";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -93,9 +94,67 @@ const readAnalysisFromSession = (analysisId) => {
   }
 };
 
+const waitForSessionAnalysis = (analysisId, timeoutMs = 4000) =>
+  new Promise((resolve) => {
+    if (typeof window === "undefined" || !analysisId) {
+      resolve(null);
+      return;
+    }
+
+    const existing = readAnalysisFromSession(analysisId);
+    if (existing) {
+      resolve(existing);
+      return;
+    }
+
+    let settled = false;
+
+    const cleanup = () => {
+      window.removeEventListener(ANALYSIS_READY_EVENT, handleReady);
+      window.clearInterval(pollId);
+      window.clearTimeout(timeoutId);
+    };
+
+    const finish = (data) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+
+    const handleReady = (event) => {
+      const eventAnalysisId = event.detail?.analysisId;
+
+      if (eventAnalysisId && eventAnalysisId !== analysisId) {
+        return;
+      }
+
+      finish(readAnalysisFromSession(analysisId));
+    };
+
+    const pollId = window.setInterval(() => {
+      const next = readAnalysisFromSession(analysisId);
+      if (next) {
+        finish(next);
+      }
+    }, 150);
+
+    const timeoutId = window.setTimeout(() => {
+      finish(null);
+    }, timeoutMs);
+
+    window.addEventListener(ANALYSIS_READY_EVENT, handleReady);
+  });
+
 export default function EmailAnalysisResult() {
   const router = useRouter();
   const { id } = router.query;
+  const source = Array.isArray(router.query.source)
+    ? router.query.source[0]
+    : router.query.source;
   const [emailData, setEmailData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -241,6 +300,7 @@ export default function EmailAnalysisResult() {
 
       try {
         setLoading(true);
+        setError(null);
 
         let data = readAnalysisFromHash();
         if (data) {
@@ -253,6 +313,10 @@ export default function EmailAnalysisResult() {
 
         if (!data) {
           data = readAnalysisFromSession(id);
+        }
+
+        if (!data && source === "session") {
+          data = await waitForSessionAnalysis(id);
         }
 
         if (!data) {
@@ -317,7 +381,7 @@ export default function EmailAnalysisResult() {
     };
 
     fetchEmailData();
-  }, [id]);
+  }, [id, source]);
 
   // 이메일 데이터가 로드된 후 자동으로 모든 IP와 URL 분석
   useEffect(() => {
