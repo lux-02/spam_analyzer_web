@@ -2,7 +2,7 @@
 
 이메일 원문을 분석하여 스팸/피싱 여부를 분석하는 웹 애플리케이션입니다.
 
-**🌐 라이브 데모**: [https://naver.darkwinterlab.com](https://naver.darkwinterlab.com)
+**🌐 라이브 데모**: [https://mail.n2f.site](https://mail.n2f.site)
 
 ## 기능
 

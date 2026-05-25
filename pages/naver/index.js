@@ -437,21 +437,21 @@ export default function Home() {
       description:
         "보안팀이 NAVER MAIL ANALYZER를 빠르게 도입할 수 있도록 체크리스트를 제공합니다.",
       action: "이메일로 받기",
-      href: "mailto:support@darkwinterlab.com?subject=NAVER%20MAIL%20ANALYZER%20도입%20가이드%20요청",
+      href: "mailto:darkwinterlab@gmail.com?subject=NAVER%20MAIL%20ANALYZER%20도입%20가이드%20요청",
     },
     {
       title: "분석 리포트 샘플",
       description:
         "실제 고위험 이메일을 분석한 리포트를 열람해 보고 투자 가치를 판단하세요.",
       action: "샘플 요청",
-      href: "mailto:support@darkwinterlab.com?subject=분석%20리포트%20샘플%20요청",
+      href: "mailto:darkwinterlab@gmail.com?subject=분석%20리포트%20샘플%20요청",
     },
     {
       title: "API 연동 사양",
       description:
         "내부 시스템이나 챗봇과 연동할 수 있는 REST API 스펙 문서를 제공합니다.",
       action: "사양 문의",
-      href: "mailto:support@darkwinterlab.com?subject=NAVER%20MAIL%20ANALYZER%20API%20연동%20문의",
+      href: "mailto:darkwinterlab@gmail.com?subject=NAVER%20MAIL%20ANALYZER%20API%20연동%20문의",
     },
   ];
 
@@ -570,7 +570,7 @@ export default function Home() {
         />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="/dwl_logo_w.svg" />
-        <meta property="og:url" content="https://darkwinterlab.com" />
+        <meta property="og:url" content="https://mail.n2f.site" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="NAVER MAIL ANALYZER" />
         <meta
@@ -614,7 +614,7 @@ export default function Home() {
 
             <div className="flex items-center gap-2 md:hidden">
               <a
-                href="mailto:support@darkwinterlab.com?subject=NAVER%20MAIL%20ANALYZER%20베타%20상담"
+                href="mailto:darkwinterlab@gmail.com?subject=NAVER%20MAIL%20ANALYZER%20베타%20상담"
                 className="btn-outline btn-sm"
               >
                 베타 상담
@@ -684,7 +684,7 @@ export default function Home() {
                   분석 시작
                 </a>
                 <a
-                  href="mailto:support@darkwinterlab.com?subject=NAVER%20MAIL%20ANALYZER%20베타%20상담"
+                  href="mailto:darkwinterlab@gmail.com?subject=NAVER%20MAIL%20ANALYZER%20베타%20상담"
                   className="btn-outline btn-sm"
                 >
                   베타 상담하기

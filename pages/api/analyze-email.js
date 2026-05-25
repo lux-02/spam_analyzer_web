@@ -113,7 +113,7 @@ export default async function handler(req, res) {
     };
 
     const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL || "https://naver.darkwinterlab.com";
+      process.env.NEXT_PUBLIC_BASE_URL || "https://mail.n2f.site";
     const resultUrl = `${baseUrl}/naver/email/${analysisId}`;
 
     return res.status(200).json({

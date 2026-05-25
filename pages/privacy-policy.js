@@ -5,7 +5,7 @@ import ThemeToggle from "../components/ui/ThemeToggle";
 
 const effectiveDate = "2026년 3월 9일 (March 9, 2026)";
 const contactEmail = "darkwinterlab@gmail.com";
-const serviceUrl = "https://naver.darkwinterlab.com";
+const serviceUrl = "https://mail.n2f.site";
 const privacyDeskKo = "개인정보 보호업무 및 고충처리 담당";
 const privacyDeskEn = "Privacy Desk and Complaint Handling";
 
