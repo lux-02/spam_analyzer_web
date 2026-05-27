@@ -676,6 +676,8 @@ function shouldSetCustomTemperature(model) {
   return !String(model || "").toLowerCase().startsWith("gpt-5");
 }
 
+const OPENAI_REQUEST_TIMEOUT_MS = 25000;
+
 async function requestOpenAIChatCompletion({ model, messages, apiKey, temperature }) {
   const body = {
     model,
@@ -687,14 +689,27 @@ async function requestOpenAIChatCompletion({ model, messages, apiKey, temperatur
     body.temperature = temperature;
   }
 
-  return fetch(OPENAI_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENAI_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(OPENAI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`OpenAI 응답이 ${OPENAI_REQUEST_TIMEOUT_MS / 1000}초 안에 오지 않아 분석을 중단했습니다.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
