@@ -34,6 +34,19 @@ export default function Document() {
     >
       <Head>
         <meta name="color-scheme" content="light dark" />
+        {/* 검색엔진 소유 확인(Google Search Console, 네이버 서치어드바이저). 값이 있을 때만 넣는다 */}
+        {process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && (
+          <meta
+            name="google-site-verification"
+            content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION}
+          />
+        )}
+        {process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION && (
+          <meta
+            name="naver-site-verification"
+            content={process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION}
+          />
+        )}
         <script
           dangerouslySetInnerHTML={{ __html: themeBootScript }}
         />

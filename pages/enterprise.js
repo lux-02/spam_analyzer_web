@@ -8,6 +8,7 @@ import {
   INTEGRATION_OPTIONS,
   IOC_FORMAT_OPTIONS,
 } from "@/utils/enterpriseBetaOptions";
+import { trackEvent } from "@/utils/analytics";
 
 const FALLBACK_EMAIL = "darkwinterlab@gmail.com";
 
@@ -112,6 +113,7 @@ export default function EnterpriseBeta() {
       }
 
       setStatus("done");
+      trackEvent("generate_lead", { lead_source: "enterprise_beta", daily_volume: form.volume });
       setForm(INITIAL_FORM);
     } catch (error) {
       console.error("기업용 베타 신청 전송 실패:", error);
@@ -142,6 +144,7 @@ export default function EnterpriseBeta() {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:url" content="https://mail.n2f.site/enterprise" />
+        <link rel="canonical" href="https://mail.n2f.site/enterprise" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content="https://mail.n2f.site/og-image.png" />
         <link rel="icon" href="/favicon.ico" />

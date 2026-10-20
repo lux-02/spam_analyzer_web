@@ -12,6 +12,18 @@ import styles from "@/styles/LandingConsole.module.css";
 import TurnstileWidget, { isTurnstileEnabled } from "@/components/TurnstileWidget";
 import MemberSignupCard from "@/components/MemberSignupCard";
 import { DEFAULT_DAILY_LIMIT, QUOTA_SESSION_KEY } from "@/utils/quotaConfig";
+import { trackEvent } from "@/utils/analytics";
+import { LANDING_FAQ } from "@/utils/landingFaq";
+import {
+  SITE_URL,
+  SITE_NAME,
+  OG_IMAGE,
+  LANDING_TITLE,
+  LANDING_DESCRIPTION,
+  buildWebApplicationJsonLd,
+  buildFaqJsonLd,
+  jsonLdHtml,
+} from "@/utils/seo";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -97,6 +109,7 @@ export default function Home() {
 
     setIsLoading(true);
     setError(null);
+    trackEvent("analysis_submit");
 
     try {
       const response = await fetch("/api/analyze-email", {
@@ -111,6 +124,7 @@ export default function Home() {
 
       if (!response.ok) {
         setIsDailyLimitReached(data.code === "daily_limit");
+        trackEvent("analysis_error", { reason: data.code || `http_${response.status}` });
         throw new Error(data.error || "분석 중 오류가 발생했습니다.");
       }
 
@@ -133,6 +147,10 @@ export default function Home() {
         }
       }
 
+      trackEvent("analysis_complete", {
+        risk_level: analysisResult.risk?.riskLevel || "unknown",
+        quota_remaining: data.quota?.remaining,
+      });
       console.log("분석 완료, 결과 페이지로 이동합니다:", analysisId);
 
       router.push(`/naver/email/${analysisId}`);
@@ -348,29 +366,6 @@ export default function Home() {
     },
   ];
 
-  const faqItems = [
-    {
-      question: "분석 결과는 어디까지 신뢰할 수 있나요?",
-      answer:
-        "수신 경로, 인증 결과, 링크, 키워드를 종합 분석하지만 100%를 보장하지는 않습니다. 의심 시 발신자 확인과 공식 채널 문의를 권장합니다.",
-    },
-    {
-      question: "분석한 데이터는 저장되나요?",
-      answer:
-        "분석 요청 시 이메일 원문과 파생 정보는 분석 목적 범위에서 일시 처리될 수 있습니다. 다만 일반 분석 경로에서는 서버 DB에 영구 저장하지 않으며, 결과는 동일 브라우저 세션 중심으로 확인하도록 설계했습니다.",
-    },
-    {
-      question: "기업용 커스텀 규칙을 적용할 수 있나요?",
-      answer:
-        "API 형태로 제공하거나 발신 도메인 화이트리스트·특정 키워드 알림 등을 커스텀 구성할 수 있습니다.",
-    },
-    {
-      question: "브라우저에서도 바로 분석할 수 있나요?",
-      answer:
-        "크롬·웨일 확장 프로그램을 설치하면 메일 화면에서 바로 분석을 실행할 수 있습니다.",
-    },
-  ];
-
   const analysisTips = [
     "제목과 발신자 정보까지 포함된 전체 원문을 붙여넣어 주세요.",
     "특수문자나 공백이 삭제되지 않도록 평문 모드로 복사하면 정확도가 높아집니다.",
@@ -417,6 +412,7 @@ export default function Home() {
     { label: "특징", href: "#features" },
     { label: "성공 사례", href: "#testimonials" },
     { label: "비교", href: "#comparison" },
+    { label: "자주 묻는 질문", href: "#faq" },
   ];
 
   const comparisonRows = [
@@ -587,33 +583,34 @@ export default function Home() {
     >
       <div className={styles.gridBackdrop} aria-hidden="true" />
       <Head>
-        <title>NAVER MAIL ANALYZER | 스팸·피싱 이메일 즉시 분석</title>
-        <meta
-          name="description"
-          content="네이버 메일 원문을 붙여넣으면 AI가 스팸·피싱 위험을 즉시 분석합니다. 링크/첨부·발신자·수신 경로·IP까지 한 번에 점검하세요."
-        />
-        <meta property="og:title" content="NAVER MAIL ANALYZER" />
-        <meta
-          property="og:description"
-          content="네이버 메일 원문을 붙여넣으면 AI가 스팸·피싱 위험을 즉시 분석합니다."
-        />
+        <title>{LANDING_TITLE}</title>
+        <meta name="description" content={LANDING_DESCRIPTION} />
+        {/* / 와 /naver 가 같은 화면이라 대표 주소를 / 로 묶는다 */}
+        <link rel="canonical" href={`${SITE_URL}/`} />
+        <meta property="og:title" content={LANDING_TITLE} />
+        <meta property="og:description" content={LANDING_DESCRIPTION} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="NAVER MAIL ANALYZER" />
+        <meta property="og:site_name" content={SITE_NAME} />
         <meta property="og:locale" content="ko_KR" />
         {/* 공유 미리보기 수집기는 SVG·상대 경로를 못 읽으므로 절대 경로 PNG(1200×630)를 쓴다 */}
-        <meta property="og:image" content="https://mail.n2f.site/og-image.png" />
+        <meta property="og:image" content={OG_IMAGE} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="의심 메일, 1분 안에 위험도를 확인하세요 - mail.n2f.site" />
-        <meta property="og:url" content="https://mail.n2f.site" />
+        <meta property="og:url" content={`${SITE_URL}/`} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="NAVER MAIL ANALYZER" />
-        <meta
-          name="twitter:description"
-          content="네이버 메일 원문을 붙여넣으면 AI가 스팸·피싱 위험을 즉시 분석합니다."
-        />
-        <meta name="twitter:image" content="https://mail.n2f.site/og-image.png" />
+        <meta name="twitter:title" content={LANDING_TITLE} />
+        <meta name="twitter:description" content={LANDING_DESCRIPTION} />
+        <meta name="twitter:image" content={OG_IMAGE} />
         <link rel="icon" href="/favicon.ico" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={jsonLdHtml(buildWebApplicationJsonLd())}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={jsonLdHtml(buildFaqJsonLd(LANDING_FAQ))}
+        />
       </Head>
 
       <div className={`container mx-auto px-4 py-8 ${styles.contentWrap}`}>
@@ -1035,7 +1032,10 @@ export default function Home() {
               <TurnstileWidget
                 ref={turnstileRef}
                 onToken={setTurnstileToken}
-                onLoadError={() => setIsTurnstileBlocked(true)}
+                onLoadError={() => {
+                  setIsTurnstileBlocked(true);
+                  trackEvent("turnstile_blocked");
+                }}
               />
 
               <button
@@ -1345,6 +1345,37 @@ export default function Home() {
                   {step.description}
                 </p>
               </motion.div>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section
+          id="faq"
+          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
+          {...getRevealMotion(0.16)}
+        >
+          <h2 className="mb-6 text-center text-2xl font-bold text-heading dark:text-white">
+            자주 묻는 질문
+          </h2>
+          {/* 답변은 접혀 있어도 HTML 에 그대로 있어 검색엔진·AI 검색이 읽을 수 있다 */}
+          <div className="mx-auto max-w-3xl divide-y divide-gray-200 dark:divide-gray-700">
+            {LANDING_FAQ.map((item) => (
+              <details key={item.question} className="group py-4">
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-left">
+                  <h3 className="text-base font-semibold text-heading dark:text-white">
+                    {item.question}
+                  </h3>
+                  <span
+                    className="mt-1 text-text-light transition-transform group-open:rotate-45 dark:text-gray-400"
+                    aria-hidden="true"
+                  >
+                    +
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm leading-6 text-text-light dark:text-gray-300">
+                  {item.answer}
+                </p>
+              </details>
             ))}
           </div>
         </motion.section>

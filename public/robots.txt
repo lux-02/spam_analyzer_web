@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /naver/email/
+
+Sitemap: https://mail.n2f.site/sitemap.xml

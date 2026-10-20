@@ -188,6 +188,33 @@ const sections = [
     ],
   },
   {
+    title: "3-4. 이용 통계(Google Analytics) / Usage Analytics",
+    blocks: [
+      {
+        heading: "🇰🇷 한국어",
+        intro:
+          "서비스 개선을 위해 Google Analytics 4로 방문·이용 통계를 수집합니다. 메일 원문, 분석 결과 내용, 이메일 주소는 보내지 않습니다.",
+        bullets: [
+          "수집 항목: 방문한 페이지(분석 결과 주소는 ID를 지운 형태), 유입 경로, 기기·브라우저 정보, 대략적인 지역, 분석 실행·완료 여부와 위험 등급(높음·보통·낮음), 사전등록 완료 여부",
+          "이용 목적: 방문 경로와 기능 이용 현황 파악, 서비스 개선",
+          "처리 위탁: Google LLC / 쿠키 등 브라우저 식별자를 이용하며, 보유·이용 기간은 해당 사업자의 정책과 GA 데이터 보관 설정에 따릅니다",
+          "거부 방법: 브라우저 설정에서 쿠키를 차단하거나 Google 애널리틱스 차단 브라우저 부가기능을 설치하면 수집되지 않으며, 메일 분석 기능 이용에는 영향이 없습니다",
+        ],
+      },
+      {
+        heading: "🇺🇸 English",
+        intro:
+          "We use Google Analytics 4 to collect visit and usage statistics to improve the service. Raw emails, analysis result contents, and email addresses are never sent.",
+        bullets: [
+          "Items collected: pages visited (analysis result URLs with the ID removed), referral source, device and browser information, approximate region, whether an analysis was run or completed and its risk level (high, medium, low), and whether a pre-registration was completed",
+          "Purpose: understanding traffic sources and feature usage, and improving the service",
+          "Processor: Google LLC / uses cookies or similar browser identifiers; retention follows the provider's policy and our GA data retention setting",
+          "How to opt out: block cookies in your browser or install the Google Analytics opt-out browser add-on. This does not affect use of email analysis",
+        ],
+      },
+    ],
+  },
+  {
     title: "4. 외부 제공 가능성 및 처리업무 위탁 / External Recipients and Processors",
     blocks: [
       {
@@ -376,6 +403,7 @@ export default function PrivacyPolicy() {
           name="description"
           content="NAVER MAIL ANALYZER의 현재 서비스 구조에 맞춘 개인정보 처리방침"
         />
+        <link rel="canonical" href="https://mail.n2f.site/privacy-policy" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 

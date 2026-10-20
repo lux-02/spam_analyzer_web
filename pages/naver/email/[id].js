@@ -736,6 +736,8 @@ export default function EmailAnalysisResult() {
       <Head>
         <title>이메일 분석 결과 - NAVER MAIL ANALYZER</title>
         <meta name="description" content="네이버 이메일 스팸/피싱 분석 결과" />
+        {/* 결과는 분석한 사람의 브라우저 세션 전용이라 검색에 노출하지 않는다 */}
+        <meta name="robots" content="noindex, nofollow" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <header className={`${styles.headerBar} p-4 shadow-md mb-6`}>

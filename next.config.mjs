@@ -48,6 +48,11 @@ const nextConfig = {
           { key: "Access-Control-Allow-Headers", value: "Content-Type" },
         ],
       },
+      // 분석 결과 페이지는 브라우저 세션 전용이라 검색 색인에서 뺀다(로딩 화면도 포함)
+      {
+        source: "/naver/email/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
       // HTTP 환경에서는 Cross-Origin-Opener-Policy 헤더를 제거하여 경고 해결
       ...(process.env.NODE_ENV === "production" && process.env.HTTPS === "true"
         ? [

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { DEFAULT_DAILY_LIMIT } from "@/utils/quotaConfig";
+import { trackEvent } from "@/utils/analytics";
 
 const COPY = {
   result: {
@@ -46,6 +47,7 @@ export default function MemberSignupCard({ variant = "result", remaining = null,
         throw new Error(data.fields?.email || data.error || "등록하지 못했습니다.");
       }
       setStatus("done");
+      trackEvent("generate_lead", { lead_source: "member_waitlist", placement: variant });
     } catch (error) {
       setStatus("error");
       setMessage(error.message);
