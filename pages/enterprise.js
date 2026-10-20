@@ -130,6 +130,20 @@ export default function EnterpriseBeta() {
           name="description"
           content="신고 메일 일괄 분류, API 연동, IOC 내보내기를 준비하고 있습니다. 필요한 기능을 알려 주시면 우선순위에 반영합니다."
         />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="NAVER MAIL ANALYZER" />
+        <meta property="og:locale" content="ko_KR" />
+        <meta property="og:title" content="기업용 베타 사전신청 - NAVER MAIL ANALYZER" />
+        <meta
+          property="og:description"
+          content="신고 메일 일괄 분류, API 연동, IOC 내보내기를 준비하고 있습니다."
+        />
+        <meta property="og:image" content="https://mail.n2f.site/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:url" content="https://mail.n2f.site/enterprise" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://mail.n2f.site/og-image.png" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 

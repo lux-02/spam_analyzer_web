@@ -569,7 +569,13 @@ export default function Home() {
           content="네이버 메일 원문을 붙여넣으면 AI가 스팸·피싱 위험을 즉시 분석합니다."
         />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="/dwl_logo_w.svg" />
+        <meta property="og:site_name" content="NAVER MAIL ANALYZER" />
+        <meta property="og:locale" content="ko_KR" />
+        {/* 공유 미리보기 수집기는 SVG·상대 경로를 못 읽으므로 절대 경로 PNG(1200×630)를 쓴다 */}
+        <meta property="og:image" content="https://mail.n2f.site/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="의심 메일, 1분 안에 위험도를 확인하세요 - mail.n2f.site" />
         <meta property="og:url" content="https://mail.n2f.site" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="NAVER MAIL ANALYZER" />
@@ -577,7 +583,7 @@ export default function Home() {
           name="twitter:description"
           content="네이버 메일 원문을 붙여넣으면 AI가 스팸·피싱 위험을 즉시 분석합니다."
         />
-        <meta name="twitter:image" content="/dwl_logo_w.svg" />
+        <meta name="twitter:image" content="https://mail.n2f.site/og-image.png" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
