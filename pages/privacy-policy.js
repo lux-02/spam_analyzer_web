@@ -4,6 +4,7 @@ import Footer from "../components/ui/Footer";
 import ThemeToggle from "../components/ui/ThemeToggle";
 
 const effectiveDate = "2026년 3월 9일 (March 9, 2026)";
+const lastUpdated = "2026년 10월 20일 (October 20, 2026)";
 const contactEmail = "darkwinterlab@gmail.com";
 const serviceUrl = "https://mail.n2f.site";
 const privacyDeskKo = "개인정보 보호업무 및 고충처리 담당";
@@ -101,6 +102,35 @@ const sections = [
           "Session restriction: In the current default flow, copying only the result URL does not reproduce the same result in another browser or a different session",
           "Security measures: HTTPS/TLS in transit, server-side environment variables for secrets, a no-server-DB-retention design, and browser-session-based result handoff are applied",
           "Deletion: When the retention period expires or the processing purpose is achieved, data is deleted without delay, or in this architecture simply not kept any longer than needed",
+        ],
+      },
+    ],
+  },
+  {
+    title: "3-1. 기업용 베타 사전신청 / Enterprise Beta Pre-registration",
+    blocks: [
+      {
+        heading: "🇰🇷 한국어",
+        intro:
+          "기업용 베타 사전신청 페이지(/enterprise)에서 신청서를 제출하면, 메일 분석과 달리 아래 정보가 서버 데이터베이스(Neon)에 저장됩니다.",
+        bullets: [
+          "수집 항목: 회사·기관명, 담당자 이름, 업무용 이메일, 하루 신고 메일 규모, 필요한 연동 시스템, 원하는 IOC 형식, 기타 요청(선택), 동의 시각",
+          "이용 목적: 기업용 베타 기능 수요 조사와 우선순위 결정, 베타 오픈 안내 연락",
+          "보유 기간: 신청일로부터 1년. 그 전에 삭제를 요청하시면 지체 없이 삭제합니다",
+          "처리 위탁: Neon(데이터베이스 호스팅) / 위탁 항목: 위 신청 정보",
+          "동의를 거부할 수 있으며, 거부하면 사전신청을 받을 수 없습니다. 개별 메일 분석 기능 이용에는 영향이 없습니다",
+        ],
+      },
+      {
+        heading: "🇺🇸 English",
+        intro:
+          "Unlike email analysis, submitting the enterprise beta pre-registration form (/enterprise) stores the following information in a server-side database (Neon).",
+        bullets: [
+          "Items collected: organization name, contact name, work email, daily reported-email volume, integrations needed, preferred IOC formats, optional message, and consent timestamp",
+          "Purpose: measuring demand for enterprise beta features, setting priorities, and contacting you when the beta opens",
+          "Retention: one year from the date of submission, or deleted without delay upon your earlier request",
+          "Processor: Neon (database hosting) / Data entrusted: the pre-registration information above",
+          "You may decline consent, in which case the pre-registration cannot be accepted. This does not affect use of individual email analysis",
         ],
       },
     ],
@@ -314,7 +344,7 @@ export default function PrivacyPolicy() {
 
           <div className="mb-6 text-sm text-gray-600 dark:text-gray-400">
             <p>시행일자 / Effective Date: {effectiveDate}</p>
-            <p>최종 수정일 / Last Updated: {effectiveDate}</p>
+            <p>최종 수정일 / Last Updated: {lastUpdated}</p>
           </div>
 
           <div className="space-y-8 text-text dark:text-text-light">

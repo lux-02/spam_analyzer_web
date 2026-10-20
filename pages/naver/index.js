@@ -608,17 +608,17 @@ export default function Home() {
                 ))}
               </nav>
               <div className="flex items-center gap-3">
+                <Link href="/enterprise" className="btn-outline btn-sm">
+                  기업용 베타
+                </Link>
                 <ThemeToggle />
               </div>
             </div>
 
             <div className="flex items-center gap-2 md:hidden">
-              <a
-                href="mailto:darkwinterlab@gmail.com?subject=NAVER%20MAIL%20ANALYZER%20베타%20상담"
-                className="btn-outline btn-sm"
-              >
-                베타 상담
-              </a>
+              <Link href="/enterprise" className="btn-outline btn-sm">
+                기업용 베타
+              </Link>
               <ThemeToggle />
               <button
                 type="button"
@@ -683,12 +683,9 @@ export default function Home() {
                 <a href="#analyze" className="btn-primary btn-sm">
                   분석 시작
                 </a>
-                <a
-                  href="mailto:darkwinterlab@gmail.com?subject=NAVER%20MAIL%20ANALYZER%20베타%20상담"
-                  className="btn-outline btn-sm"
-                >
-                  베타 상담하기
-                </a>
+                <Link href="/enterprise" className="btn-outline btn-sm">
+                  기업용 베타 사전신청
+                </Link>
               </div>
             </div>
           )}
@@ -1331,6 +1328,9 @@ export default function Home() {
               <a href="#analyze" className="btn-primary">
                 무료로 시작하기
               </a>
+              <Link href="/enterprise" className="btn-outline">
+                기업용 베타 사전신청
+              </Link>
             </div>
           </motion.div>
         </motion.section>
