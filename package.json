@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-sitemap.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -25,6 +26,7 @@
     "js-base64": "^3.7.7",
     "leaflet": "^1.9.4",
     "maath": "^0.10.4",
+    "marked": "^14.1.4",
     "next": "^15.3.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

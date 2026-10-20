@@ -60,6 +60,50 @@ export function buildFaqJsonLd(items) {
 }
 
 /**
+ * 분석 사례 글의 Article 구조화 데이터
+ * @param {string} slug
+ * @param {Object} meta - utils/reportContent 의 머리말
+ * @returns {Object}
+ */
+export function buildArticleJsonLd(slug, meta) {
+  const url = `${SITE_URL}/reports/${slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: meta.title,
+    description: meta.description,
+    image: meta.image ? `${SITE_URL}${meta.image}` : OG_IMAGE,
+    datePublished: meta.date,
+    dateModified: meta.updated,
+    inLanguage: "ko-KR",
+    keywords: meta.keywords.join(", "),
+    mainEntityOfPage: url,
+    url,
+    author: { "@type": "Person", name: "오윤석", url: `${SITE_URL}/` },
+    publisher: { "@type": "Organization", name: PUBLISHER_NAME, url: `${SITE_URL}/` },
+    ...(meta.blog ? { isBasedOn: meta.blog } : {}),
+  };
+}
+
+/**
+ * 홈 > 분석 사례 > 글 경로
+ * @param {{ name: string, path: string }[]} trail
+ * @returns {Object}
+ */
+export function buildBreadcrumbJsonLd(trail) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: trail.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: `${SITE_URL}${item.path}`,
+    })),
+  };
+}
+
+/**
  * <script type="application/ld+json"> 에 넣을 문자열. "</script>" 로 태그가 끊기지 않게 막는다.
  * @param {Object} data
  * @returns {{ __html: string }}

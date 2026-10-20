@@ -37,7 +37,7 @@ const rajdhani = Rajdhani({
   variable: "--font-rajdhani",
 });
 
-export default function Home() {
+export default function Home({ latestReports = [] }) {
   const [rawData, setRawData] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -410,7 +410,7 @@ export default function Home() {
   const navLinks = [
     { label: "분석 시작", href: "#analyze" },
     { label: "특징", href: "#features" },
-    { label: "성공 사례", href: "#testimonials" },
+    ...(latestReports.length > 0 ? [{ label: "분석 사례", href: "/reports" }] : []),
     { label: "비교", href: "#comparison" },
     { label: "자주 묻는 질문", href: "#faq" },
   ];
@@ -480,29 +480,6 @@ export default function Home() {
     },
   ];
 
-  const testimonialCards = [
-    {
-      quote:
-        "내부 임직원 신고 메일을 1차로 걸러내는 데 걸리던 시간이 70% 줄었습니다.",
-      name: "김지훈",
-      role: "중견 제조사 보안 담당자",
-      outcome: "하루 평균 40건의 신고 메일을 10분 이내로 분류",
-    },
-    {
-      quote:
-        "메일 원문을 해석할 줄 몰랐던 상담팀도 위험 근거를 바로 이해하고 공유할 수 있습니다.",
-      name: "박서연",
-      role: "핀테크 고객지원 팀장",
-      outcome: "재문의율 35% 감소",
-    },
-    {
-      quote:
-        "베타 API를 활용해 Slack 경보와 연동하니 야간 대응이 훨씬 수월해졌습니다.",
-      name: "이도윤",
-      role: "스타트업 CISO",
-      outcome: "야간 보안 온콜 대응 시간 50% 단축",
-    },
-  ];
 
   const integrationSteps = [
     {
@@ -1237,42 +1214,43 @@ export default function Home() {
           </div>
         </motion.section>
 
-        <motion.section
-          className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
-          id="testimonials"
-          {...getRevealMotion(0.12)}
-        >
-          <h3 className="mb-6 text-center text-2xl font-bold text-heading dark:text-white">
-            베타 사용자의 피드백
-          </h3>
-          <p className="mx-auto max-w-2xl text-center text-sm text-text-light dark:text-gray-300">
-            실제 베타 참여 기업이 체감한 변화와 효율을 확인하세요.
-          </p>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {testimonialCards.map((testimonial) => (
-              <motion.div
-                key={testimonial.name}
-                className="card flex h-full flex-col gap-4 p-5"
-                {...getCardHover()}
-              >
-                <p className="text-sm text-text dark:text-gray-100">
-                  &ldquo;{testimonial.quote}&rdquo;
-                </p>
-                <div className="mt-auto">
-                  <div className="text-sm font-semibold text-heading dark:text-white">
-                    {testimonial.name}
+        {latestReports.length > 0 && (
+          <motion.section
+            className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
+            id="reports"
+            {...getRevealMotion(0.12)}
+          >
+            <h2 className="mb-2 text-center text-2xl font-bold text-heading dark:text-white">
+              실제 메일 분석 사례
+            </h2>
+            <p className="mx-auto max-w-2xl text-center text-sm text-text-light dark:text-gray-300">
+              직접 받은 스팸·피싱 메일을 끝까지 따라가 정리한 기록입니다.
+            </p>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {latestReports.map((report) => (
+                <Link
+                  key={report.slug}
+                  href={`/reports/${report.slug}`}
+                  className="card flex h-full flex-col gap-3 p-5 transition-colors hover:border-primary"
+                >
+                  <div className="flex items-center gap-2 text-xs text-text-light dark:text-gray-400">
+                    <time dateTime={report.date}>{report.date}</time>
+                    {report.audience && <span className="text-primary">{report.audience}</span>}
                   </div>
-                  <div className="text-xs text-text-light dark:text-gray-300">
-                    {testimonial.role}
-                  </div>
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary dark:bg-primary/20">
-                    {testimonial.outcome}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
+                  <h3 className="text-base font-semibold leading-snug text-heading dark:text-white">
+                    {report.title}
+                  </h3>
+                  <p className="text-sm text-text-light dark:text-gray-300">{report.description}</p>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-6 text-center">
+              <Link href="/reports" className="btn-outline btn-sm">
+                분석 사례 전체 보기
+              </Link>
+            </div>
+          </motion.section>
+        )}
 
         <motion.section
           className={`mt-16 ${styles.mainSection} ${styles.sectionShell}`}
@@ -1457,4 +1435,13 @@ export default function Home() {
       <Footer />
     </div>
   );
+}
+
+export async function getStaticProps() {
+  // 서버(빌드)에서만 실행되므로 fs 를 쓰는 모듈을 여기서 불러온다
+  const { listReports } = await import("@/utils/reportContent");
+  const latestReports = listReports()
+    .slice(0, 3)
+    .map(({ slug, title, description, date, audience }) => ({ slug, title, description, date, audience }));
+  return { props: { latestReports } };
 }

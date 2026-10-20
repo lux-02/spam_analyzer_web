@@ -1,1 +1,1 @@
-export { default } from "./naver";
+export { default, getStaticProps } from "./naver";
