@@ -18,6 +18,8 @@ import RiskScoreChecklist from "@/components/RiskScoreChecklist";
 import VirusTotalButton from "@/components/VirusTotalButton";
 import VirusTotalModal from "@/components/VirusTotalModal";
 import Footer from "@/components/ui/Footer";
+import MemberSignupCard from "@/components/MemberSignupCard";
+import { QUOTA_SESSION_KEY } from "@/utils/quotaConfig";
 import styles from "@/styles/CiaConsole.module.css";
 // 로컬 스토리지 키 상수
 const FAILED_DOMAINS_KEY = "vtFailedDomains";
@@ -160,6 +162,17 @@ export default function EmailAnalysisResult() {
   const [error, setError] = useState(null);
   const [ipLocations, setIpLocations] = useState([]);
   const [showDetails, setShowDetails] = useState(true);
+  const [remainingQuota, setRemainingQuota] = useState(null);
+
+  // 분석 직후 첫 화면이 넘겨 준 오늘 남은 무료 분석 횟수
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(QUOTA_SESSION_KEY) || "null");
+      if (typeof saved?.remaining === "number") setRemainingQuota(saved.remaining);
+    } catch (quotaError) {
+      console.error("남은 분석 횟수 읽기 실패:", quotaError);
+    }
+  }, []);
 
   // VirusTotal 관련 상태
   const [virusTotalModalOpen, setVirusTotalModalOpen] = useState(false);
@@ -1004,6 +1017,15 @@ export default function EmailAnalysisResult() {
             onCheckUrl={(url) => handleVirusTotalCheck(url, "url")}
             failedDomains={failedDomains}
             analyzedTargets={analyzedTargets}
+            className={styles.hudPanel}
+          />
+        </motion.div>
+
+        {/* 결과를 다 본 뒤에만 회원 기능 사전등록을 제안한다 */}
+        <motion.div {...getPanelMotion(0.28)}>
+          <MemberSignupCard
+            variant="result"
+            remaining={remainingQuota}
             className={styles.hudPanel}
           />
         </motion.div>

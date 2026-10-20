@@ -1,4 +1,5 @@
 import { analyzeEmailIntent } from "../../utils/emailAnalyzer";
+import { guardAnalysisRequest } from "../../utils/analysisGuard";
 
 /**
  * 이메일 의도 분석 API 엔드포인트
@@ -17,6 +18,12 @@ export default async function handler(req, res) {
 
     if (!emailContent) {
       return res.status(400).json({ error: "이메일 내용이 필요합니다" });
+    }
+
+    // OpenAI 를 직접 부르는 경로라 메일 분석과 같은 하루 횟수를 함께 쓴다
+    const guard = await guardAnalysisRequest(req);
+    if (!guard.ok) {
+      return res.status(guard.status).json(guard.body);
     }
 
     // 이메일 의도 분석 실행

@@ -2,6 +2,7 @@ import {
   validateEnterpriseBetaInput,
   saveEnterpriseBetaRequest,
 } from "../../utils/enterpriseBeta";
+import { getClientIp } from "../../utils/clientIp";
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT_MAX = 5;
@@ -9,14 +10,6 @@ const FALLBACK_EMAIL = "darkwinterlab@gmail.com";
 
 // 서버리스 인스턴스 단위의 간단한 제출 제한(같은 IP 1시간 5회)
 const submissions = new Map();
-
-const getClientIp = (req) => {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-  return req.socket?.remoteAddress || "unknown";
-};
 
 const isRateLimited = (ip, now = Date.now()) => {
   const recent = (submissions.get(ip) || []).filter(

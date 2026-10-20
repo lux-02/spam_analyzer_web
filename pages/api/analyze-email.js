@@ -9,6 +9,10 @@ import {
   analyzeEmailIntent,
   validateEmailRawData,
 } from "../../utils/emailAnalyzer";
+import {
+  guardAnalysisRequest,
+  refundAnalysisRequest,
+} from "../../utils/analysisGuard";
 
 // CORS 미들웨어 초기화
 const cors = Cors({
@@ -35,6 +39,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
+  let quotaConsumed = false;
   try {
     const { rawData } = req.body;
 
@@ -51,6 +56,13 @@ export default async function handler(req, res) {
         error: `올바른 이메일 원문 데이터가 아닙니다: ${isValid.reason}`,
       });
     }
+
+    // 형식 검사를 통과한 요청만 사람 확인과 하루 횟수 차감 대상으로 본다
+    const guard = await guardAnalysisRequest(req);
+    if (!guard.ok) {
+      return res.status(guard.status).json(guard.body);
+    }
+    quotaConsumed = true;
 
     console.log("이메일 분석 요청 시작");
 
@@ -122,9 +134,12 @@ export default async function handler(req, res) {
       storage: "session-only",
       resultUrl,
       result: finalResult,
+      quota: guard.quota,
     });
   } catch (error) {
     console.error("이메일 분석 처리 오류:", error);
+    // 서버 쪽 실패로 결과를 못 받았으니 오늘 횟수에서 빼지 않는다
+    if (quotaConsumed) await refundAnalysisRequest(req);
     return res.status(500).json({
       success: false,
       message: "이메일 분석 중 오류가 발생했습니다",

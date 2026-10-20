@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -9,6 +9,9 @@ import Footer from "@/components/ui/Footer";
 import { isValidEmailRawData } from "@/utils/validators";
 import { motion, useReducedMotion } from "framer-motion";
 import styles from "@/styles/LandingConsole.module.css";
+import TurnstileWidget, { isTurnstileEnabled } from "@/components/TurnstileWidget";
+import MemberSignupCard from "@/components/MemberSignupCard";
+import { DEFAULT_DAILY_LIMIT, QUOTA_SESSION_KEY } from "@/utils/quotaConfig";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -30,6 +33,10 @@ export default function Home() {
   const [showFloatingCTA, setShowFloatingCTA] = useState(false);
   const [isFloatingDismissed, setIsFloatingDismissed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const [isDailyLimitReached, setIsDailyLimitReached] = useState(false);
+  const [isTurnstileBlocked, setIsTurnstileBlocked] = useState(false);
+  const turnstileRef = useRef(null);
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
 
@@ -79,6 +86,15 @@ export default function Home() {
       return;
     }
 
+    if (isTurnstileEnabled && !turnstileToken) {
+      setError(
+        isTurnstileBlocked
+          ? "사람 확인 상자를 불러오지 못했습니다. 광고 차단 확장 프로그램을 잠시 끄거나 다른 네트워크에서 다시 시도해 주세요."
+          : "분석 버튼 위의 사람 확인 상자를 먼저 체크해 주세요."
+      );
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -88,12 +104,13 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ rawData }),
+        body: JSON.stringify({ rawData, turnstileToken }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        setIsDailyLimitReached(data.code === "daily_limit");
         throw new Error(data.error || "분석 중 오류가 발생했습니다.");
       }
 
@@ -111,13 +128,22 @@ export default function Home() {
           `analysisResult:${analysisId}`,
           JSON.stringify(analysisResult)
         );
+        if (data.quota) {
+          sessionStorage.setItem(QUOTA_SESSION_KEY, JSON.stringify(data.quota));
+        }
       }
 
       console.log("분석 완료, 결과 페이지로 이동합니다:", analysisId);
 
       router.push(`/naver/email/${analysisId}`);
     } catch (err) {
-      setError(err.message);
+      // 토큰은 한 번만 쓸 수 있어서, 응답이 깨진 네트워크 오류까지 포함해 실패하면 새로 받는다
+      turnstileRef.current?.reset();
+      setError(
+        err instanceof SyntaxError
+          ? "서버 응답이 늦어 분석을 마치지 못했습니다. 잠시 후 다시 시도해 주세요."
+          : err.message
+      );
       setIsLoading(false);
     }
   };
@@ -148,7 +174,10 @@ export default function Home() {
   const statHighlights = [
     { value: "20+ 항목", description: "헤더·본문·링크·IP를 교차 검사" },
     { value: "< 1분", description: "AI가 위험도를 계산하는 평균 시간" },
-    { value: "베타 무료", description: "지금 가입 없이 무제한 분석" },
+    {
+      value: `하루 ${DEFAULT_DAILY_LIMIT}회 무료`,
+      description: "가입 없이 바로 분석",
+    },
   ];
 
   const featureCards = [
@@ -715,9 +744,9 @@ export default function Home() {
                   위험도를 확인하세요
                 </h1>
                 <p className={`mt-4 text-base md:text-lg ${styles.heroLead}`}>
-                  링크·첨부·발신자 인증 결과를 종합해 클릭 전에 피싱 위험을
-                  차단하세요. 메인 랜딩도 이제 분석 콘솔과 같은 위협 인텔리전스
-                  톤으로 동작합니다.
+                  링크나 첨부파일을 열기 전에, 메일 원문만 붙여넣으세요. 보낸
+                  곳의 실제 주소와 인증 결과, 숨은 링크까지 한 화면에서
+                  확인할 수 있습니다.
                 </p>
                 <ul className="mt-6 space-y-3 text-left">
                   {heroHighlights.map((highlight) => (
@@ -1000,6 +1029,14 @@ export default function Home() {
               </motion.div>
 
               {error && <div className="alert alert-danger">{error}</div>}
+
+              {isDailyLimitReached && <MemberSignupCard variant="limit" />}
+
+              <TurnstileWidget
+                ref={turnstileRef}
+                onToken={setTurnstileToken}
+                onLoadError={() => setIsTurnstileBlocked(true)}
+              />
 
               <button
                 type="submit"
@@ -1355,7 +1392,7 @@ export default function Home() {
                 의심 메일 분석을 지금 시작해 보세요
               </p>
               <p className="text-xs text-text-light dark:text-gray-300">
-                무료 베타 기간 동안 분석 횟수 제한 없이 사용할 수 있습니다.
+                가입 없이 하루 {DEFAULT_DAILY_LIMIT}회까지 무료로 분석할 수 있습니다.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

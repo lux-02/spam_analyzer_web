@@ -136,6 +136,58 @@ const sections = [
     ],
   },
   {
+    title: "3-2. 회원 기능 사전등록 / Member Feature Waitlist",
+    blocks: [
+      {
+        heading: "🇰🇷 한국어",
+        intro:
+          "분석 결과 화면 등에서 회원 기능 오픈 알림을 신청하면 아래 정보가 서버 데이터베이스(Neon)에 저장됩니다. 현재 회원 가입·로그인 기능은 없으며, 이 등록은 오픈 안내용입니다.",
+        bullets: [
+          "수집 항목: 이메일 주소, 동의 시각",
+          "이용 목적: 회원 기능(분석 기록 저장, 분석 횟수 확대 등) 오픈 안내 연락",
+          "보유 기간: 등록일(다시 등록한 경우 마지막 등록일)로부터 1년. 그 전에 삭제를 요청하시면 지체 없이 삭제합니다",
+          "처리 위탁: Neon(데이터베이스 호스팅) / 위탁 항목: 위 등록 정보",
+          "동의를 거부할 수 있으며, 거부해도 메일 분석 기능 이용에는 영향이 없습니다",
+        ],
+      },
+      {
+        heading: "🇺🇸 English",
+        intro:
+          "When you sign up for the member feature launch notice (for example, on the analysis result page), the following information is stored in a server-side database (Neon). Member sign-up and login are not available yet; this list is only used for the launch notice.",
+        bullets: [
+          "Items collected: email address and consent timestamp",
+          "Purpose: notifying you when member features (saved analysis history, higher analysis limits, etc.) launch",
+          "Retention: one year from the date of sign-up (or the latest re-registration), or deleted without delay upon your earlier request",
+          "Processor: Neon (database hosting) / Data entrusted: the sign-up information above",
+          "You may decline consent; this does not affect use of email analysis",
+        ],
+      },
+    ],
+  },
+  {
+    title: "3-3. 남용 방지를 위한 접속 정보 처리 / Abuse Prevention",
+    blocks: [
+      {
+        heading: "🇰🇷 한국어",
+        intro:
+          "무료 분석의 남용을 막기 위해 분석 요청마다 아래 처리가 이루어집니다.",
+        bullets: [
+          "하루 분석 횟수 제한: 접속 IP를 그대로 저장하지 않고, 서버만 아는 비밀 값과 날짜를 섞어 가명처리(HMAC-SHA256)한 값과 날짜, 요청 횟수만 서버 데이터베이스(Neon)에 저장합니다. IPv6는 주소 앞 64비트 단위로 셉니다. 보유 기간은 기록일로부터 7일입니다",
+          "자동화 요청 확인: Cloudflare Turnstile을 이용해 사람의 요청인지 확인합니다. 이 과정에서 Cloudflare, Inc.에 브라우저·기기 신호와 접속 IP가 전달될 수 있으며, 보유·이용 기간은 해당 사업자의 정책 및 관련 법령에 따릅니다",
+        ],
+      },
+      {
+        heading: "🇺🇸 English",
+        intro:
+          "To prevent abuse of free analysis, the following processing takes place for each analysis request.",
+        bullets: [
+          "Daily analysis limit: we do not store your IP address as-is. Only a pseudonymized value (HMAC-SHA256 keyed with a server-side secret and the date), the date, and the request count are stored in a server-side database (Neon) for seven days. IPv6 addresses are counted per /64 prefix",
+          "Automated request check: we use Cloudflare Turnstile to confirm that a request comes from a person. Browser and device signals and your IP address may be sent to Cloudflare, Inc., subject to the provider's policy and applicable law",
+        ],
+      },
+    ],
+  },
+  {
     title: "4. 외부 제공 가능성 및 처리업무 위탁 / External Recipients and Processors",
     blocks: [
       {

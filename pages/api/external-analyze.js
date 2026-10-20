@@ -9,6 +9,7 @@ import {
   analyzeEmailIntent,
 } from "@/utils/emailAnalyzer";
 import { isValidEmailRawData } from "@/utils/validators";
+import { guardAnalysisRequest } from "@/utils/analysisGuard";
 
 // API 키 설정 (환경 변수에서 가져오거나 기본값 사용)
 const API_KEYS = (process.env.EXTERNAL_API_KEYS || "")
@@ -42,13 +43,16 @@ export default async function handler(req, res) {
   try {
     const { rawData, apiKey } = req.body;
 
+    // 설정된 키가 하나도 없으면 undefined === undefined 로 통과하지 않도록 막는다
     const isValidApiKey =
-      API_KEYS.length > 0
+      typeof apiKey === "string" &&
+      apiKey.length > 0 &&
+      (API_KEYS.length > 0
         ? API_KEYS.includes(apiKey)
-        : apiKey === DEFAULT_API_KEY;
+        : Boolean(DEFAULT_API_KEY) && apiKey === DEFAULT_API_KEY);
 
     if (!isValidApiKey) {
-      console.warn("유효하지 않은 API 키 요청:", apiKey || "없음");
+      console.warn("유효하지 않은 API 키 요청:", apiKey ? "키 불일치" : "키 없음");
       return res.status(401).json({ error: "유효하지 않은 API 키입니다." });
     }
 
@@ -63,6 +67,13 @@ export default async function handler(req, res) {
       return res.status(400).json({
         error: `올바른 이메일 원문 데이터가 아닙니다: ${validation.reason}`,
       });
+    }
+
+    // 확장 프로그램 등에 들어간 키는 공개된 것과 같으므로 같은 하루 횟수를 적용한다.
+    // 브라우저 위젯을 띄울 수 없는 경로라 사람 확인은 하지 않는다.
+    const guard = await guardAnalysisRequest(req, { requireHuman: false });
+    if (!guard.ok) {
+      return res.status(guard.status).json(guard.body);
     }
 
     const headerAnalysis = analyzeEmailHeader(rawData);
@@ -134,6 +145,7 @@ export default async function handler(req, res) {
       id,
       resultUrl,
       result: finalResult,
+      quota: guard.quota,
       message: "분석이 완료되었습니다.",
     });
   } catch (error) {

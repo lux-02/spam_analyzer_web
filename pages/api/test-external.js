@@ -29,6 +29,11 @@ function runMiddleware(req, res, fn) {
 }
 
 export default async function handler(req, res) {
+  // 개발용 시험 경로. 운영에서는 하루 횟수 제한을 우회하는 통로가 되므로 닫는다.
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ error: "Not Found" });
+  }
+
   await runMiddleware(req, res, cors);
 
   if (req.method !== "POST") {
